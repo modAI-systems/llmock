@@ -93,6 +93,25 @@ class TestSomething:
         assert True
 ```
 
+### Docker
+ALWAYS use explicit `docker <object> <verb>` syntax. Never use shorthand commands.
+
+```bash
+# CORRECT - use explicit subcommands
+docker image build -t llmock .       # Build image
+docker container run -p 8000:8000 llmock  # Run container
+docker container ls                  # List containers
+docker image ls                      # List images
+docker container rm <id>             # Remove container
+docker container logs <id>           # View logs
+
+# WRONG - do not use shorthand
+docker build ...
+docker run ...
+docker ps
+docker images
+```
+
 ### Application
 ```bash
 uv run python -m llmock   # Start the FastAPI server

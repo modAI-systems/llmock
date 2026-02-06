@@ -7,20 +7,41 @@ OpenAI-compatible mock server for testing LLM integrations.
 
 ## Features
 
-- Full OpenAI API compatibility (`/v1/models`, `/v1/chat/completions`, `/v1/completions`)
+- OpenAI API compatibility with the most important endpoints (`/v1/models`, `/v1/chat/completions`)
 - Configurable mock responses via strategies
 - Default mirror strategy (echoes input as output)
 - Streaming support
-- Health check endpoint
 
 ## Quick Start
 
-### Prerequisites
+### Option A: Docker
 
+```bash
+docker container run -p 8000:8000 ghcr.io/modai-systems/llmock:latest
+```
+
+Test with this sample request (yes, the default secret key is really `your-secret-api-key`):
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secret-api-key" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+What the request does is simply mirror the input, so it returns `Hello!`.
+
+
+### Option B: Local Build
+
+**Prerequisites:**
 - Python 3.14+
 - [uv](https://docs.astral.sh/uv/) (package manager)
 
-### Installation
+**Installation:**
 
 ```bash
 git clone https://github.com/modAI-systems/llmock.git
@@ -28,7 +49,7 @@ cd llmock
 uv sync --all-extras
 ```
 
-### Run the Server
+**Run the Server:**
 
 ```bash
 uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000
@@ -41,15 +62,6 @@ uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The server will be available at `http://localhost:8000`. Health check available at `/health`.
-
-### Docker
-
-Build and run with Docker:
-
-```bash
-docker build -t llmock .
-docker run -p 8000:8000 llmock
-```
 
 ### Usage Example
 
