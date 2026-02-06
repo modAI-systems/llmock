@@ -7,10 +7,10 @@ OpenAI-compatible mock server for testing LLM integrations.
 
 ## Features
 
-- OpenAI API compatibility with the most important endpoints (`/v1/models`, `/v1/chat/completions`)
+- OpenAI API compatibility with key endpoints (`/v1/models`, `/v1/chat/completions`, `/v1/responses`)
 - Configurable mock responses via strategies
 - Default mirror strategy (echoes input as output)
-- Streaming support
+- Streaming support for both Chat Completions and Responses APIs
 
 ## Quick Start
 
@@ -75,11 +75,19 @@ client = OpenAI(
     api_key="mock-key"  # Any key works
 )
 
+# Chat Completions API
 response = client.chat.completions.create(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Hello!"}]
 )
 print(response.choices[0].message.content)
+
+# Responses API
+response = client.responses.create(
+    model="gpt-4o",
+    input="Hello!"
+)
+print(response.output[0].content[0].text)
 ```
 
 ## Configuration

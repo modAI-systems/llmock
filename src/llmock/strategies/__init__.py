@@ -1,6 +1,11 @@
-"""Chat response strategies."""
+"""Response generation strategies."""
 
-from llmock.strategies.base import ChatStrategy
-from llmock.strategies.content_mirror import ContentMirrorStrategy
+from llmock.strategies.base import ChatCompletionStrategy, ResponseStrategy
+from llmock.strategies.content_mirror import ChatMirrorStrategy, ResponseMirrorStrategy
 
-__all__ = ["ChatStrategy", "ContentMirrorStrategy"]
+__all__ = [
+    "ChatCompletionStrategy",
+    "ChatMirrorStrategy",
+    "ResponseStrategy",
+    "ResponseMirrorStrategy",
+]

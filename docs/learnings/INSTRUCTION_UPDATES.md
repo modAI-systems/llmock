@@ -19,3 +19,8 @@ This file tracks corrections provided by the user to improve future performance.
 - **Mistake**: Used shorthand Docker commands like `docker build` and `docker run`.
 - **Correction**: Use explicit subcommands `docker image` and `docker container`.
 - **New Rule**: Always use `docker image build` instead of `docker build`, and `docker container run` instead of `docker run`. This applies to all Docker commands - prefer the explicit `docker <object> <verb>` syntax (e.g., `docker container ls`, `docker image ls`, `docker container rm`, etc.).
+
+### 2026-02-06 - Documentation updates for endpoint changes
+- **Mistake**: Added `/v1/responses` endpoint without updating documentation (README.md, ARCHITECTURE.md).
+- **Correction**: Documentation must be updated whenever endpoints are added, changed, or deleted.
+- **New Rule**: When adding, modifying, or removing API endpoints, always check and update all relevant documentation files (README.md, docs/ARCHITECTURE.md, and any other docs that reference endpoints).

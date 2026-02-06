@@ -38,6 +38,14 @@ This project is designed for AI-first development. All agents MUST follow these 
     2. Run `uv run ruff check src tests` to lint code.
     3. Fix any issues before marking task as complete.
 
+### 6. Documentation Updates for API Changes (MANDATORY)
+- **RULE**: When adding, modifying, or deleting API endpoints, ALWAYS update documentation.
+- **PROCESS**:
+    1. Check `README.md` for endpoint references and usage examples.
+    2. Check `docs/ARCHITECTURE.md` for endpoint documentation.
+    3. Check any other docs that reference API endpoints.
+    4. Update all affected documentation before marking task as complete.
+
 ## PROJECT OVERVIEW
 - **Goal**: LLM-optimized AI project.
 - **Core Stack**: Python + FastAPI + uv (build system)

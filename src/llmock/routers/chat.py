@@ -16,20 +16,20 @@ from openai.types.chat.chat_completion_chunk import ChoiceDelta
 
 from llmock.config import Config, get_config
 from llmock.schemas.chat import ChatCompletionRequest
-from llmock.strategies import ChatStrategy, ContentMirrorStrategy
+from llmock.strategies import ChatMirrorStrategy, ChatCompletionStrategy
 
 router = APIRouter(prefix="/v1", tags=["chat"])
 
 # Default strategy for generating responses
-_default_strategy: ChatStrategy = ContentMirrorStrategy()
+_default_strategy: ChatCompletionStrategy = ChatMirrorStrategy()
 
 
-def get_strategy() -> ChatStrategy:
+def get_strategy() -> ChatCompletionStrategy:
     """Get the current chat strategy."""
     return _default_strategy
 
 
-def set_strategy(strategy: ChatStrategy) -> None:
+def set_strategy(strategy: ChatCompletionStrategy) -> None:
     """Set the chat strategy to use."""
     global _default_strategy
     _default_strategy = strategy
@@ -177,7 +177,7 @@ async def generate_streaming_response(
 async def create_chat_completion(
     request: ChatCompletionRequest,
     config: Annotated[Config, Depends(get_config)],
-    strategy: Annotated[ChatStrategy, Depends(get_strategy)],
+    strategy: Annotated[ChatCompletionStrategy, Depends(get_strategy)],
 ) -> ChatCompletion | StreamingResponse:
     """Create a chat completion.
 

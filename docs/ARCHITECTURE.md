@@ -4,7 +4,7 @@
 
 ## Overview
 
-Mock server implementing OpenAI's `/v1/models`, `/v1/chat/completions`, and `/v1/completions` endpoints. Default behavior: echo input as output (MirrorStrategy). Pluggable strategy system for custom behaviors.
+Mock server implementing OpenAI's `/v1/models`, `/v1/chat/completions`, and `/v1/responses` endpoints. Default behavior: echo input as output (MirrorStrategy). Pluggable strategy system for custom behaviors.
 
 **Spec Reference**: Follow [OpenAI API Reference](https://platform.openai.com/docs/api-reference) exactly.
 **OpenAPI Spec**: https://app.stainless.com/api/spec/documented/openai/openapi.documented.yml
@@ -39,17 +39,20 @@ Response
 
 ### Strategy Pattern
 
-**Interface**:
+**Interfaces**:
 ```
+ChatStrategy {
+  generateResponse(request) → string
+}
+
 ResponseStrategy {
-  generateChatResponse(request) → { content, finish_reason }
-  generateCompletionResponse(request) → { text, finish_reason }
+  generateResponse(request) → string
 }
 ```
 
-**Default Strategy (MirrorStrategy)**:
-- Chat: Extract last user message → return as assistant message
-- Completion: Extract prompt → return as completion text
+**Default Strategies (MirrorStrategy)**:
+- `ChatMirrorStrategy`: Extract last user message → return as assistant message
+- `ResponseMirrorStrategy`: Extract last user input → return as response text
 
 **Future Strategies**: FixedResponse, Template, Random, AIProxy
 
@@ -89,8 +92,8 @@ Returns configured model list. [OpenAI Spec](https://platform.openai.com/docs/ap
 ### POST /v1/chat/completions
 Chat-style completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/chat/create)
 
-### POST /v1/completions
-Legacy text completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/completions)
+### POST /v1/responses
+OpenAI's newer Responses API with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/responses)
 
 ## Streaming (SSE)
 
