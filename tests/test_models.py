@@ -9,6 +9,9 @@ from openai import AsyncOpenAI, NotFoundError
 from llmock3.app import create_app
 from llmock3.config import Config, get_config
 
+# Test API key used across all tests
+TEST_API_KEY = "test-api-key"
+
 
 @pytest.fixture
 def test_config() -> Config:
@@ -18,13 +21,14 @@ def test_config() -> Config:
             {"id": "test-model-1", "created": 1700000000, "owned_by": "test-org"},
             {"id": "test-model-2", "created": 1700000001, "owned_by": "test-org"},
         ],
+        "api-key": TEST_API_KEY,
     }
 
 
 @pytest.fixture
 async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None]:
     """Provide an AsyncOpenAI client using ASGI transport (no real server needed)."""
-    app = create_app()
+    app = create_app(config_getter=lambda: test_config)
     app.dependency_overrides[get_config] = lambda: test_config
 
     # Use httpx with ASGITransport to test without spinning up a real server
@@ -33,12 +37,11 @@ async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None
         transport=transport, base_url="http://testserver"
     ) as http_client:
         client = AsyncOpenAI(
-            api_key="test-api-key",
+            api_key=TEST_API_KEY,
             http_client=http_client,
             base_url="http://testserver/v1",
         )
         yield client
-
 
 async def test_list_models_returns_model_list(openai_client: AsyncOpenAI) -> None:
     """Test that listing models returns the configured models."""

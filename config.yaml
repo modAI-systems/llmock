@@ -1,6 +1,9 @@
 # LLMock3 Configuration
 # Each section is consumed by its respective router/component
 
+# API key for authentication (optional - if not set, no auth required)
+api-key: "your-secret-api-key"
+
 # Models configuration (used by models router)
 models:
   - id: "gpt-4o"
