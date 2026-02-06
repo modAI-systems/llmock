@@ -1,6 +1,17 @@
 # llmock
 
+[![CI](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml/badge.svg)](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 OpenAI-compatible mock server for testing LLM integrations.
+
+## Features
+
+- Full OpenAI API compatibility (`/v1/models`, `/v1/chat/completions`, `/v1/completions`)
+- Configurable mock responses via strategies
+- Default mirror strategy (echoes input as output)
+- Streaming support
+- Health check endpoint
 
 ## Quick Start
 
@@ -12,10 +23,12 @@ OpenAI-compatible mock server for testing LLM integrations.
 ### Installation
 
 ```bash
+git clone https://github.com/modAI-systems/llmock.git
+cd llmock
 uv sync --all-extras
 ```
 
-### Run the Application
+### Run the Server
 
 ```bash
 uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000
@@ -27,7 +40,51 @@ For development with auto-reload:
 uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Health check available at `/health`.
+The server will be available at `http://localhost:8000`. Health check available at `/health`.
+
+### Docker
+
+Build and run with Docker:
+
+```bash
+docker build -t llmock .
+docker run -p 8000:8000 llmock
+```
+
+### Usage Example
+
+Point your OpenAI client to the mock server:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="mock-key"  # Any key works
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+print(response.choices[0].message.content)
+```
+
+## Configuration
+
+Edit `config.yaml` to configure available models:
+
+```yaml
+models:
+  - id: "gpt-4o"
+    created: 1715367049
+    owned_by: "openai"
+  - id: "gpt-4o-mini"
+    created: 1721172741
+    owned_by: "openai"
+```
+
+## Development
 
 ### Run Tests
 
@@ -42,33 +99,22 @@ uv run ruff format src tests    # Format code
 uv run ruff check src tests     # Lint code
 ```
 
-## Configuration
-
-Edit `config.yaml` to configure router-specific settings:
-
-```yaml
-models:
-  - id: "gpt-4o"
-    created: 1715367049
-    owned_by: "openai"
-  - id: "gpt-4o-mini"
-    created: 1721172741
-    owned_by: "openai"
-```
-
-Server host/port are configured via uvicorn CLI arguments (see above).
-
-## What It Does
-
-Implements OpenAI's `/v1/models`, `/v1/chat/completions`, and `/v1/completions` endpoints.
-
-Default behavior: Mirror input as output (MirrorStrategy).
-
 ## Documentation
 
 - **Architecture**: See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Decisions**: See [docs/DECISIONS.md](docs/DECISIONS.md)
 
-## For AI Agents
+## Contributing
 
-Read [AGENTS.md](./AGENTS.md) first for workflow protocols.
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests and linting (`uv run pytest && uv run ruff check src tests`)
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

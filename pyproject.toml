@@ -1,7 +1,9 @@
 [project]
 name = "llmock"
 version = "0.1.0"
-description = "LLM-optimized AI project with FastAPI"
+description = "OpenAI-compatible mock server for testing LLM integrations"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115.0",
