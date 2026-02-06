@@ -81,6 +81,18 @@ uv run pytest -x           # Stop on first failure
 uv run pytest --tb=short   # Shorter traceback
 ```
 
+**Test Style**: Always write tests as top-level functions, NOT grouped in classes.
+```python
+# CORRECT
+def test_something() -> None:
+    assert True
+
+# WRONG - do not use test classes
+class TestSomething:
+    def test_something(self) -> None:
+        assert True
+```
+
 ### Application
 ```bash
 uv run python -m llmock3   # Start the FastAPI server

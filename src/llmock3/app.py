@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from llmock3.config import get_settings
-from llmock3.routers import health
+from llmock3.routers import health, models
 
 
 def create_app() -> FastAPI:
@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health.router)
+    app.include_router(models.router)
 
     return app
 

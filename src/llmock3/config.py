@@ -5,12 +5,24 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+
+
+class ModelConfig(BaseModel):
+    """Configuration for a single model."""
+
+    id: str = Field(description="The model identifier")
+    created: int = Field(
+        default=1700000000, description="Unix timestamp when model was created"
+    )
+    owned_by: str = Field(
+        default="llmock3", description="Organization that owns the model"
+    )
 
 
 class YamlConfigSettingsSource(PydanticBaseSettingsSource):
@@ -67,6 +79,16 @@ class Settings(BaseSettings):
     # Config file path (not loaded from YAML itself)
     config_path: Path = Field(
         default=Path("config.yaml"), description="Path to YAML config file"
+    )
+
+    # Models configuration
+    models: list[ModelConfig] = Field(
+        default_factory=lambda: [
+            ModelConfig(id="gpt-4o", created=1715367049, owned_by="openai"),
+            ModelConfig(id="gpt-4o-mini", created=1721172741, owned_by="openai"),
+            ModelConfig(id="gpt-3.5-turbo", created=1677610602, owned_by="openai"),
+        ],
+        description="List of models to expose",
     )
 
     @classmethod
