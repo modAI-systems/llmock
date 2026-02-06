@@ -6,7 +6,7 @@ This project is designed for AI-first development. All agents MUST follow these 
 
 ### 1. Technology Skill Acquisition
 - **RULE**: NEVER work on a technology without verified skills.
-- **PROCESS**: 
+- **PROCESS**:
     1. If a task involves a new technology/library: **STOP**.
     2. Perform a `web_search` or `librarian` task to investigate best practices, common pitfalls, and API usage.
     3. Document findings in `docs/skills/<tech-name>.md`.
@@ -47,7 +47,7 @@ This project is designed for AI-first development. All agents MUST follow these 
 - `docs/skills/`: Tech-specific knowledge base.
 - `docs/learnings/`: Persistent memory of user corrections.
 - `docs/tests/`: Global test configurations and results.
-- `src/llmock3/`: Main application source code.
+- `src/llmock/`: Main application source code.
 - `tests/`: Test files.
 
 ## COMMANDS
@@ -61,7 +61,7 @@ uv sync --all-extras       # Install with all optional dependencies (dev, etc.)
 uv add <package>           # Add a dependency
 uv add --dev <package>     # Add a dev dependency
 uv run <command>           # Run a command in the virtual environment
-uv run python -m llmock3   # Run the application
+uv run python -m llmock   # Run the application
 uv run pytest              # Run tests
 ```
 
@@ -95,5 +95,5 @@ class TestSomething:
 
 ### Application
 ```bash
-uv run python -m llmock3   # Start the FastAPI server
+uv run python -m llmock   # Start the FastAPI server
 ```

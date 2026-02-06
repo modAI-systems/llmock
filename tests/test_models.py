@@ -6,8 +6,8 @@ import httpx
 import pytest
 from openai import AsyncOpenAI, NotFoundError
 
-from llmock3.app import create_app
-from llmock3.config import Config, get_config
+from llmock.app import create_app
+from llmock.config import Config, get_config
 
 # Test API key used across all tests
 TEST_API_KEY = "test-api-key"

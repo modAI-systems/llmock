@@ -1,1 +1,1 @@
-"""Test package for LLMock3."""
+"""Test package for llmock."""

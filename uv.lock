@@ -191,7 +191,7 @@ wheels = [
 ]
 
 [[package]]
-name = "llmock3"
+name = "llmock"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

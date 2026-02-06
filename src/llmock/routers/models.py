@@ -4,8 +4,8 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from llmock3.config import Config, get_config
-from llmock3.schemas.models import Model, ModelList
+from llmock.config import Config, get_config
+from llmock.schemas.models import Model, ModelList
 
 router = APIRouter(prefix="/v1", tags=["models"])
 

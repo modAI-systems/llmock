@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from llmock3.config import Config, get_config
-from llmock3.routers import health, models
+from llmock.config import Config, get_config
+from llmock.routers import health, models
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
@@ -51,7 +51,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
 def create_app(config_getter: Callable[[], Config] = get_config) -> FastAPI:
     """Create and configure the FastAPI application."""
-    app = FastAPI(title="LLMock3")
+    app = FastAPI(title="llmock")
 
     # Add API key middleware
     app.add_middleware(APIKeyMiddleware, config_getter=config_getter)

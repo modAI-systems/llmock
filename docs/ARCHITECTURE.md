@@ -1,4 +1,4 @@
-# LLMock3 Architecture
+# llmock Architecture
 
 **Simple OpenAI-compatible mock server for testing**
 
@@ -6,7 +6,7 @@
 
 Mock server implementing OpenAI's `/v1/models`, `/v1/chat/completions`, and `/v1/completions` endpoints. Default behavior: echo input as output (MirrorStrategy). Pluggable strategy system for custom behaviors.
 
-**Spec Reference**: Follow [OpenAI API Reference](https://platform.openai.com/docs/api-reference) exactly.  
+**Spec Reference**: Follow [OpenAI API Reference](https://platform.openai.com/docs/api-reference) exactly.
 **OpenAPI Spec**: https://app.stainless.com/api/spec/documented/openai/openapi.documented.yml
 
 ## Core Design
@@ -47,7 +47,7 @@ ResponseStrategy {
 }
 ```
 
-**Default Strategy (MirrorStrategy)**: 
+**Default Strategy (MirrorStrategy)**:
 - Chat: Extract last user message → return as assistant message
 - Completion: Extract prompt → return as completion text
 
@@ -89,7 +89,7 @@ Returns configured model list. [OpenAI Spec](https://platform.openai.com/docs/ap
 ### POST /v1/chat/completions
 Chat-style completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/chat/create)
 
-### POST /v1/completions  
+### POST /v1/completions
 Legacy text completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/completions)
 
 ## Streaming (SSE)
@@ -108,13 +108,13 @@ data: {"id":"chatcmpl-xyz",...,"delta":{},"finish_reason":"stop"}
 data: [DONE]
 ```
 
-**Chunking**: Word-level (split on whitespace) for MVP.  
+**Chunking**: Word-level (split on whitespace) for MVP.
 **Format**: Exactly matches [OpenAI Streaming Spec](https://platform.openai.com/docs/api-reference/chat/streaming)
 
 ## Authentication
 
-**Format**: `Authorization: Bearer <api-key>`  
-**Validation**: Against `config/auth.yaml`  
+**Format**: `Authorization: Bearer <api-key>`
+**Validation**: Against `config/auth.yaml`
 **Errors**: Return 401 with OpenAI error format if invalid
 
 ## Error Handling
@@ -135,16 +135,16 @@ All errors follow OpenAI format:
 
 ## Key Decisions
 
-**Why Strategy Pattern?**  
+**Why Strategy Pattern?**
 Add new response behaviors (fixed, template, proxy) without touching core code.
 
-**Why YAML config?**  
+**Why YAML config?**
 Change API keys and models without rebuilding.
 
-**Why separate Streaming Adapter?**  
+**Why separate Streaming Adapter?**
 Strategies generate content, adapter handles SSE protocol. Clean separation.
 
-**No persistence?**  
+**No persistence?**
 Keem mock easy and stateless.
 
 ## Testing Strategy
@@ -172,7 +172,7 @@ response = client.chat.completions.create(
 class FixedResponseStrategy:
     def __init__(self, response_text):
         self.response_text = response_text
-    
+
     def generateChatResponse(self, req):
         return {
             'content': self.response_text,
@@ -190,6 +190,6 @@ model_strategies:
 ## References
 
 - **OpenAI API Docs**: https://platform.openai.com/docs/api-reference
-- **OpenAPI Spec**: https://app.stainless.com/api/spec/documented/openai/openapi.documented.yml  
+- **OpenAPI Spec**: https://app.stainless.com/api/spec/documented/openai/openapi.documented.yml
 - **SSE Spec**: https://html.spec.whatwg.org/multipage/server-sent-events.html
 - **Strategy Pattern**: https://refactoring.guru/design-patterns/strategy

@@ -1,6 +1,6 @@
 # Key Decisions
 
-## 2026-02-06 - LLMock3 Design
+## 2026-02-06 - llmock Design
 
 **Strategy Pattern**: Add new response behaviors (fixed, template, proxy) without changing core code.
 
