@@ -18,10 +18,16 @@ uv sync --all-extras
 ### Run the Application
 
 ```bash
-uv run python -m llmock3
+uv run uvicorn llmock3.app:app --host 0.0.0.0 --port 8000
 ```
 
-The server starts at `http://localhost:8000`. Health check available at `/health`.
+For development with auto-reload:
+
+```bash
+uv run uvicorn llmock3.app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Health check available at `/health`.
 
 ### Run Tests
 
@@ -38,14 +44,19 @@ uv run ruff check src tests     # Lint code
 
 ## Configuration
 
-Edit `config.yaml` or use environment variables (prefixed with `LLMOCK3_`):
+Edit `config.yaml` to configure router-specific settings:
 
 ```yaml
-host: "0.0.0.0"
-port: 8000
-debug: false
-app_name: "LLMock3"
+models:
+  - id: "gpt-4o"
+    created: 1715367049
+    owned_by: "openai"
+  - id: "gpt-4o-mini"
+    created: 1721172741
+    owned_by: "openai"
 ```
+
+Server host/port are configured via uvicorn CLI arguments (see above).
 
 ## What It Does
 

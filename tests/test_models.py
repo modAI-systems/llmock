@@ -9,20 +9,16 @@ import uvicorn
 from fastapi import FastAPI
 from openai import OpenAI
 
-from llmock3.config import ModelConfig, Settings, get_settings
+from llmock3.config import Config, get_config
 from llmock3.routers import health, models
 
 
-def create_test_app(settings: Settings) -> FastAPI:
-    """Create a FastAPI app with custom settings for testing."""
-    app = FastAPI(
-        title=settings.app_name,
-        version=settings.app_version,
-        debug=settings.debug,
-    )
+def create_test_app(config: Config) -> FastAPI:
+    """Create a FastAPI app with custom config for testing."""
+    app = FastAPI(title="LLMock3-Test")
 
-    # Override the settings dependency
-    app.dependency_overrides[get_settings] = lambda: settings
+    # Override the config dependency
+    app.dependency_overrides[get_config] = lambda: config
 
     # Include routers
     app.include_router(health.router)
@@ -61,23 +57,20 @@ class ServerRunner:
 
 
 @pytest.fixture
-def test_settings() -> Settings:
-    """Provide test settings with custom models."""
-    return Settings(
-        app_name="LLMock3-Test",
-        app_version="0.1.0-test",
-        debug=True,
-        models=[
-            ModelConfig(id="test-model-1", created=1700000000, owned_by="test-org"),
-            ModelConfig(id="test-model-2", created=1700000001, owned_by="test-org"),
+def test_config() -> Config:
+    """Provide test config with custom models."""
+    return {
+        "models": [
+            {"id": "test-model-1", "created": 1700000000, "owned_by": "test-org"},
+            {"id": "test-model-2", "created": 1700000001, "owned_by": "test-org"},
         ],
-    )
+    }
 
 
 @pytest.fixture
-def server(test_settings: Settings) -> Generator[ServerRunner, None, None]:
-    """Start a test server with custom settings and yield it."""
-    app = create_test_app(test_settings)
+def server(test_config: Config) -> Generator[ServerRunner, None, None]:
+    """Start a test server with custom config and yield it."""
+    app = create_test_app(test_config)
     test_server = ServerRunner(app)
     test_server.start()
     yield test_server

@@ -18,16 +18,6 @@ async def test_health_endpoint_returns_healthy_status(client: AsyncClient) -> No
     assert data["status"] == "healthy"
 
 
-async def test_health_endpoint_returns_app_info(client: AsyncClient) -> None:
-    """Test that the health endpoint returns correct app information."""
-    response = await client.get("/health")
-    data = response.json()
-
-    # These values come from test_settings fixture
-    assert data["app_name"] == "LLMock3-Test"
-    assert data["version"] == "0.1.0-test"
-
-
 async def test_health_endpoint_returns_timestamp(client: AsyncClient) -> None:
     """Test that the health endpoint returns a valid timestamp."""
     before = datetime.now(UTC)
@@ -45,5 +35,5 @@ async def test_health_response_schema(client: AsyncClient) -> None:
     response = await client.get("/health")
     data = response.json()
 
-    required_fields = {"status", "app_name", "version", "timestamp"}
+    required_fields = {"status", "timestamp"}
     assert required_fields == set(data.keys())
