@@ -45,10 +45,11 @@ async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None
 
 async def test_chat_completions_non_streaming(openai_client: AsyncOpenAI) -> None:
     """Test non-streaming chat completion returns valid response."""
+    user_message = "Hello, how are you?"
     response = await openai_client.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "user", "content": "Hello, how are you?"},
+            {"role": "user", "content": user_message},
         ],
         stream=False,
     )
@@ -64,8 +65,8 @@ async def test_chat_completions_non_streaming(openai_client: AsyncOpenAI) -> Non
     choice = response.choices[0]
     assert choice.index == 0
     assert choice.message.role == "assistant"
-    assert choice.message.content is not None
-    assert len(choice.message.content) > 0
+    # ContentMirrorStrategy should return the user's message
+    assert choice.message.content == user_message
     assert choice.finish_reason == "stop"
 
     # Verify usage
@@ -79,10 +80,11 @@ async def test_chat_completions_non_streaming(openai_client: AsyncOpenAI) -> Non
 
 async def test_chat_completions_streaming(openai_client: AsyncOpenAI) -> None:
     """Test streaming chat completion returns valid chunks."""
+    user_message = "Hello world!"
     stream = await openai_client.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "user", "content": "Hello!"},
+            {"role": "user", "content": user_message},
         ],
         stream=True,
     )
@@ -112,5 +114,6 @@ async def test_chat_completions_streaming(openai_client: AsyncOpenAI) -> None:
         if chunk.choices[0].delta.content:
             content_parts.append(chunk.choices[0].delta.content)
 
+    # ContentMirrorStrategy should return the user's message (streamed in chunks)
     full_content = "".join(content_parts)
-    assert len(full_content) > 0
+    assert full_content == user_message
