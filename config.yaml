@@ -1,0 +1,11 @@
+# LLMock3 Configuration
+# Values here can be overridden by environment variables prefixed with LLMOCK3_
+
+# Server settings
+host: "0.0.0.0"
+port: 8000
+debug: false
+
+# Application settings
+app_name: "LLMock3"
+app_version: "0.1.0"
