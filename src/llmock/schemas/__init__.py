@@ -1,7 +1,7 @@
 """Pydantic schemas for OpenAI API compatibility.
 
 Request schemas are defined locally.
-Response schemas are imported from the openai library.
+Response schemas (including Model) are imported from the openai library.
 """
 
 from llmock.schemas.chat import ChatCompletionRequest, ChatMessageRequest

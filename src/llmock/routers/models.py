@@ -28,6 +28,7 @@ async def list_models(
     models = [
         Model(
             id=m["id"],
+            object="model",
             created=m["created"],
             owned_by=m["owned_by"],
         )
@@ -51,6 +52,7 @@ async def retrieve_model(
         if m["id"] == model_id:
             return Model(
                 id=m["id"],
+                object="model",
                 created=m["created"],
                 owned_by=m["owned_by"],
             )

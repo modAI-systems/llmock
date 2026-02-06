@@ -1,24 +1,13 @@
-"""OpenAI Model object schemas."""
+"""OpenAI Model object schemas.
+
+Model is imported from the openai library.
+ModelList is defined locally as OpenAI uses pagination wrappers.
+"""
 
 from typing import Literal
 
+from openai.types import Model
 from pydantic import BaseModel, Field
-
-
-class Model(BaseModel):
-    """Describes an OpenAI model offering that can be used with the API."""
-
-    id: str = Field(
-        description="The model identifier, which can be referenced in the API endpoints."
-    )
-    object: Literal["model"] = Field(
-        default="model",
-        description='The object type, which is always "model".',
-    )
-    created: int = Field(
-        description="The Unix timestamp (in seconds) when the model was created."
-    )
-    owned_by: str = Field(description="The organization that owns the model.")
 
 
 class ModelList(BaseModel):
