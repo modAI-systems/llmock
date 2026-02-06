@@ -43,6 +43,7 @@ async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None
         )
         yield client
 
+
 async def test_list_models_returns_model_list(openai_client: AsyncOpenAI) -> None:
     """Test that listing models returns the configured models."""
     result = await openai_client.models.list()

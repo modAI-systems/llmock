@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from llmock.config import Config, get_config
-from llmock.routers import health, models
+from llmock.routers import chat, health, models
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
@@ -59,6 +59,7 @@ def create_app(config_getter: Callable[[], Config] = get_config) -> FastAPI:
     # Include routers
     app.include_router(health.router)
     app.include_router(models.router)
+    app.include_router(chat.router)
 
     return app
 
