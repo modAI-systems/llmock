@@ -1,3 +1,8 @@
+---
+name: openai-types
+description: OpenAI Python SDK types documentation - when to use SDK types vs custom Pydantic models for FastAPI
+---
+
 # OpenAI Python SDK Types
 
 This skill documents the types available in the `openai` Python package and best practices for using them.
