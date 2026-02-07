@@ -28,7 +28,7 @@ async def client_with_auth(
     config_with_api_key: Config,
 ) -> AsyncGenerator[AsyncClient, None]:
     """Client for app with API key configured."""
-    app = create_app(config_getter=lambda: config_with_api_key)
+    app = create_app(config=config_with_api_key)
     app.dependency_overrides[get_config] = lambda: config_with_api_key
 
     transport = ASGITransport(app=app)
@@ -41,7 +41,7 @@ async def client_no_auth(
     config_without_api_key: Config,
 ) -> AsyncGenerator[AsyncClient, None]:
     """Client for app without API key configured."""
-    app = create_app(config_getter=lambda: config_without_api_key)
+    app = create_app(config=config_without_api_key)
     app.dependency_overrides[get_config] = lambda: config_without_api_key
 
     transport = ASGITransport(app=app)

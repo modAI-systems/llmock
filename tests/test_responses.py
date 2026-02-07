@@ -26,7 +26,7 @@ def test_config() -> Config:
 @pytest.fixture
 async def client(test_config: Config) -> AsyncGenerator[httpx.AsyncClient, None]:
     """Provide an async HTTP client for testing."""
-    app = create_app(config_getter=lambda: test_config)
+    app = create_app(config=test_config)
     app.dependency_overrides[get_config] = lambda: test_config
 
     transport = httpx.ASGITransport(app=app)

@@ -4,6 +4,11 @@
 # API key for authentication (optional - if not set, no auth required)
 api-key: "your-secret-api-key"
 
+# CORS configuration
+cors:
+  allow-origins:
+    - "http://localhost:8000"
+
 # Models configuration (used by models router)
 models:
   - id: "gpt-4o"

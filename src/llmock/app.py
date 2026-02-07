@@ -1,8 +1,7 @@
 """FastAPI application factory and setup."""
 
-from collections.abc import Callable
-
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -13,19 +12,22 @@ from llmock.routers import chat, health, models, responses
 class APIKeyMiddleware(BaseHTTPMiddleware):
     """Middleware to validate API key for all requests except health."""
 
-    def __init__(self, app, config_getter: Callable[[], Config] = get_config):
-        """Initialize middleware with config getter."""
+    def __init__(self, app, config: Config):
+        """Initialize middleware with config."""
         super().__init__(app)
-        self.config_getter = config_getter
+        self.config = config
 
     async def dispatch(self, request: Request, call_next):
         """Check API key before processing request."""
+        # Skip auth for OPTIONS preflight requests (CORS)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         # Skip auth for health endpoint
         if request.url.path == "/health":
             return await call_next(request)
 
-        config = self.config_getter()
-        config_api_key = config.get("api-key")
+        config_api_key = self.config.get("api-key")
 
         # If no API key configured, allow all requests
         if not config_api_key:
@@ -49,12 +51,25 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-def create_app(config_getter: Callable[[], Config] = get_config) -> FastAPI:
+def create_app(config: Config = get_config()) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="llmock")
 
+    # Get CORS origins from config
+    cors_config = config.get("cors", {})
+    allow_origins = cors_config.get("allow-origins", ["http://localhost:8000"])
+
+    # Add CORS middleware to allow browser connections
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allow_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Add API key middleware
-    app.add_middleware(APIKeyMiddleware, config_getter=config_getter)
+    app.add_middleware(APIKeyMiddleware, config=config)
 
     # Include routers
     app.include_router(health.router)
