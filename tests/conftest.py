@@ -24,7 +24,7 @@ def test_config() -> Config:
 @pytest.fixture
 async def client(test_config: Config) -> AsyncGenerator[AsyncClient, None]:
     """Provide an async HTTP client for testing."""
-    app = create_app(config_getter=lambda: test_config)
+    app = create_app(config=test_config)
 
     # Override the config dependency for testing
     app.dependency_overrides[get_config] = lambda: test_config

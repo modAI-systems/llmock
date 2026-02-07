@@ -27,7 +27,7 @@ def test_config() -> Config:
 @pytest.fixture
 async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None]:
     """Provide an AsyncOpenAI client using ASGI transport (no real server needed)."""
-    app = create_app(config_getter=lambda: test_config)
+    app = create_app(config=test_config)
     app.dependency_overrides[get_config] = lambda: test_config
 
     # Use httpx with ASGITransport to test without spinning up a real server

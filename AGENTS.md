@@ -9,7 +9,7 @@ This project is designed for AI-first development. All agents MUST follow these 
 - **PROCESS**:
     1. If a task involves a new technology/library: **STOP**.
     2. Perform a `web_search` or `librarian` task to investigate best practices, common pitfalls, and API usage.
-    3. Document findings in `docs/skills/<tech-name>.md`.
+    3. Document findings in `.agents/skills/<tech-name>.md`.
     4. Only proceed with implementation once the skill file exists and is reviewed.
 
 ### 2. Architecture First
