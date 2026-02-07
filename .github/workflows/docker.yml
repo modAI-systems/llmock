@@ -8,8 +8,6 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    # Skip Docker build for Dependabot commits (dependency updates only)
-    if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
       packages: write
