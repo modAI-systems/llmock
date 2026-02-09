@@ -4,18 +4,26 @@
 
 This project is designed for AI-first development. All agents MUST follow these protocols:
 
+### 0. Context Loading (ALWAYS FIRST)
+- **RULE**: ALWAYS read project context before starting ANY task.
+- **PROCESS**:
+    1. Read `docs/ARCHITECTURE.md` to understand system design.
+    2. Read `docs/learnings/*.md` to learn from past corrections.
+    3. Check `.agents/skills/` for relevant technology skills.
+- **WHY**: These files contain critical knowledge from past work. Skipping them leads to repeated mistakes and inconsistent code.
+
 ### 1. Technology Skill Acquisition
 - **RULE**: NEVER work on a technology without verified skills.
 - **PROCESS**:
     1. If a task involves a new technology/library: **STOP**.
-    2. Perform a `web_search` or `librarian` task to investigate best practices, common pitfalls, and API usage.
-    3. Document findings in `.agents/skills/<tech-name>.md`.
+    2. Perform a web search or use the dedicated task agent to investigate best practices, common pitfalls, and API usage.
+    3. Document findings in `.agents/skills/<tech-name>/SKILL.md`.
     4. Only proceed with implementation once the skill file exists and is reviewed.
 
 ### 2. Architecture First
 - **RULE**: Architecture MUST be adapted/reviewed before coding starts.
 - **PROCESS**:
-    1. For any new feature/package, update `docs/architecture/DECISIONS.md`.
+    1. For any new feature/package, update `docs/DECISIONS.md`.
     2. Ensure the architecture aligns with the overall project goals.
 
 ### 3. Learning from Corrections
@@ -47,14 +55,13 @@ This project is designed for AI-first development. All agents MUST follow these 
     4. Update all affected documentation before marking task as complete.
 
 ## PROJECT OVERVIEW
-- **Goal**: LLM-optimized AI project.
 - **Core Stack**: Python + FastAPI + uv (build system)
 
 ## WHERE TO LOOK
-- `docs/architecture/`: System design and decisions.
-- `docs/skills/`: Tech-specific knowledge base.
+- `docs/ARCHITECTURE.md`: System design documentation.
+- `docs/DECISIONS.md`: Architecture decisions.
 - `docs/learnings/`: Persistent memory of user corrections.
-- `docs/tests/`: Global test configurations and results.
+- `.agents/skills/`: Tech-specific knowledge base.
 - `src/llmock/`: Main application source code.
 - `tests/`: Test files.
 
