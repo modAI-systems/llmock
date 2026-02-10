@@ -102,6 +102,25 @@ models:
   - id: "gpt-4o-mini"
     created: 1721172741
     owned_by: "openai"
+
+### Environment Variable Overrides
+
+You can override values from `config.yaml` using environment variables with the `LLMOCK_` prefix.
+Nested keys are joined with underscores, and dashes are converted to underscores.
+
+Examples:
+
+```bash
+# Scalar override
+export LLMOCK_API_KEY=your-secret-api-key
+
+# Nested override: cors.allow-origins
+export LLMOCK_CORS_ALLOW_ORIGINS="http://localhost:8000;http://localhost:5173"
+```
+
+Notes:
+- Lists are parsed from semicolon-separated values.
+- Only keys that exist in `config.yaml` are overridden.
 ```
 
 ## Development
