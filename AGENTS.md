@@ -33,11 +33,18 @@ This project is designed for AI-first development. All agents MUST follow these 
     2. Update `docs/learnings/INSTRUCTION_UPDATES.md` with a new rule to prevent recurrence.
     3. Append relevant rules to `AGENTS.md` if they are project-wide.
 
-### 4. Test-Driven Completion
-- **RULE**: A task is NOT done until tests pass.
+### 4. Test-Driven Completion (MANDATORY)
+- **RULE**: A task is NOT done until tests pass. ALWAYS write tests for new functionality.
 - **PROCESS**:
-    1. Every work package MUST include tests.
-    2. Tests MUST pass before the task is marked `completed` in the todo list.
+    1. Every new feature/function MUST have corresponding tests.
+    2. Create tests BEFORE marking the task as complete.
+    3. Organize tests in appropriate test files (e.g., `tests/test_<module>.py`).
+    4. Tests MUST pass before the task is marked `completed` in the todo list.
+    5. Run full test suite to ensure no regressions: `uv run pytest -v`
+- **COMMON MISTAKES TO AVOID**:
+    - Adding new functionality without tests
+    - Forgetting to test edge cases (empty values, special characters, nested structures)
+    - Not testing error conditions and validation
 
 ### 5. Code Quality Gate (MANDATORY)
 - **RULE**: ALWAYS run linting and formatting before completing any code task.
