@@ -3,7 +3,7 @@
 Response schemas are imported from openai.types.chat.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,15 @@ class ChatMessageRequest(BaseModel):
     )
 
 
+class StreamOptions(BaseModel):
+    """Options for streaming responses."""
+
+    include_usage: bool = Field(
+        default=False,
+        description="If set, an additional chunk with usage stats is sent.",
+    )
+
+
 class ChatCompletionRequest(BaseModel):
     """Request body for chat completions."""
 
@@ -31,6 +40,10 @@ class ChatCompletionRequest(BaseModel):
         default=False,
         description="If set, partial message deltas will be sent as SSE events.",
     )
+    stream_options: StreamOptions | None = Field(
+        default=None,
+        description="Options for streaming responses.",
+    )
     temperature: float | None = Field(
         default=1.0,
         ge=0.0,
@@ -41,4 +54,8 @@ class ChatCompletionRequest(BaseModel):
         default=None,
         ge=1,
         description="The maximum number of tokens to generate.",
+    )
+    tools: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="A list of tools the model may call.",
     )

@@ -4,7 +4,7 @@ Response schemas are imported from openai.types.responses.
 Request schemas need to be Pydantic models for FastAPI validation.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -54,8 +54,16 @@ class SimpleInputMessage(BaseModel):
     content: str
 
 
+class FunctionCallOutputItem(BaseModel):
+    """A function call output item in the input list (tool result)."""
+
+    type: Literal["function_call_output"] = "function_call_output"
+    call_id: str = Field(description="The ID of the function call being responded to.")
+    output: str = Field(description="The output of the function call.")
+
+
 # Input can be a simple string, or a list of message items
-InputItem = InputMessage | SimpleInputMessage
+InputItem = InputMessage | SimpleInputMessage | FunctionCallOutputItem
 
 
 # ============================================================================
@@ -117,6 +125,10 @@ class ResponseCreateRequest(BaseModel):
         default="disabled",
         description="Truncation strategy for the context window.",
     )
+    tools: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="A list of tools the model may call.",
+    )
 
 
 # ============================================================================
@@ -139,6 +151,7 @@ __all__ = [
     "InputItem",
     "InputMessage",
     "SimpleInputMessage",
+    "FunctionCallOutputItem",
     "InputTextContent",
     "InputImageContent",
     # Re-exported from openai
