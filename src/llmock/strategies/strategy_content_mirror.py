@@ -7,6 +7,7 @@ what was sent.
 from typing import Any
 
 from llmock.schemas.chat import ChatCompletionRequest
+from llmock.utils.chat import extract_text_content
 from llmock.schemas.responses import (
     InputMessage,
     InputTextContent,
@@ -39,7 +40,9 @@ class ChatMirrorStrategy:
         """
         for message in reversed(request.messages):
             if message.role == "user" and message.content:
-                return [text_response(message.content)]
+                text = extract_text_content(message.content)
+                if text:
+                    return [text_response(text)]
         return [text_response("No user message provided.")]
 
 
@@ -70,19 +73,30 @@ class ResponseMirrorStrategy:
 
         # Handle list of input items - find the last user message
         for item in reversed(request.input):
-            # Handle SimpleInputMessage (role + content as string)
+            # Handle SimpleInputMessage (role + content as string or list)
             if isinstance(item, SimpleInputMessage):
                 if item.role == "user":
-                    return [text_response(item.content)]
+                    text = extract_text_content(item.content)
+                    if text:
+                        return [text_response(text)]
 
             # Handle InputMessage (role + content as string or list)
             elif isinstance(item, InputMessage):
                 if item.role == "user":
                     if isinstance(item.content, str):
                         return [text_response(item.content)]
-                    # Handle content list (e.g., input_text items)
+                    # Handle content list (e.g., input_text items or ContentPart)
+                    texts = []
                     for content_item in item.content:
                         if isinstance(content_item, InputTextContent):
-                            return [text_response(content_item.text)]
+                            texts.append(content_item.text)
+                        elif (
+                            hasattr(content_item, "type")
+                            and content_item.type == "text"
+                            and getattr(content_item, "text", None)
+                        ):
+                            texts.append(content_item.text)
+                    if texts:
+                        return [text_response("\n".join(texts))]
 
         return [text_response("No user input provided.")]

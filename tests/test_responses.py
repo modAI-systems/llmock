@@ -278,3 +278,16 @@ async def test_responses_optional_parameters(client: httpx.AsyncClient) -> None:
     assert data["top_p"] == 0.9
     assert data["max_output_tokens"] == 100
     assert data["truncation"] == "auto"
+
+
+async def test_responses_list_format_content(client: httpx.AsyncClient) -> None:
+    """List-format message content in /responses is accepted and echoed as plain text."""
+    response = await client.post(
+        "/responses",
+        json={
+            "model": "gpt-4o",
+            "input": [{"role": "user", "content": [{"type": "text", "text": "Hello"}]}],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["output"][0]["content"][0]["text"] == "Hello"

@@ -31,6 +31,18 @@ OutputTextContent = ResponseOutputText
 # ============================================================================
 
 
+class ContentPart(BaseModel):
+    """A single content part in a message (e.g. text, image_url)."""
+
+    type: str = Field(
+        description="The type of content part, e.g. 'text' or 'image_url'."
+    )
+    text: str | None = Field(
+        default=None,
+        description="The text content (for type='text').",
+    )
+
+
 class InputImageContent(BaseModel):
     """Image content in an input message (URL-based)."""
 
@@ -44,14 +56,14 @@ class InputMessage(BaseModel):
 
     type: Literal["message"] = "message"
     role: Literal["user", "assistant", "system", "developer"]
-    content: str | list[InputTextContent | InputImageContent]
+    content: str | list[InputTextContent | InputImageContent | ContentPart]
 
 
 class SimpleInputMessage(BaseModel):
-    """Simplified input message format (just role and content as string)."""
+    """Simplified input message format (just role and content as string or list)."""
 
     role: Literal["user", "assistant", "system", "developer"]
-    content: str
+    content: str | list[ContentPart]
 
 
 class FunctionCallOutputItem(BaseModel):

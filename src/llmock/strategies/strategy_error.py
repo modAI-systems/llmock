@@ -27,6 +27,7 @@ of delegating to the normal response strategy.
 from typing import Any
 
 from llmock.schemas.chat import ChatCompletionRequest
+from llmock.utils.chat import extract_text_content
 from llmock.schemas.responses import (
     InputMessage,
     InputTextContent,
@@ -82,7 +83,7 @@ def _extract_last_chat_message(request: ChatCompletionRequest) -> str | None:
     """Extract the content of the last user message from a chat request."""
     for message in reversed(request.messages):
         if message.role == "user" and message.content:
-            return message.content
+            return extract_text_content(message.content)
     return None
 
 
@@ -93,12 +94,19 @@ def _extract_last_response_message(request: ResponseCreateRequest) -> str | None
 
     for item in reversed(request.input):
         if isinstance(item, SimpleInputMessage) and item.role == "user":
-            return item.content
+            return extract_text_content(item.content)
         if isinstance(item, InputMessage) and item.role == "user":
             if isinstance(item.content, str):
                 return item.content
+            # Handle content list (InputTextContent or ContentPart)
             for content_item in item.content:
                 if isinstance(content_item, InputTextContent):
+                    return content_item.text
+                if (
+                    hasattr(content_item, "type")
+                    and content_item.type == "text"
+                    and getattr(content_item, "text", None)
+                ):
                     return content_item.text
     return None
 
