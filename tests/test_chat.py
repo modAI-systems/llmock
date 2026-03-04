@@ -117,3 +117,15 @@ async def test_chat_completions_streaming(openai_client: AsyncOpenAI) -> None:
     # ContentMirrorStrategy should return the user's message (streamed in chunks)
     full_content = "".join(content_parts)
     assert full_content == user_message
+
+
+async def test_chat_completions_list_format_content(openai_client: AsyncOpenAI) -> None:
+    """List-format message content is accepted and echoed as a plain string."""
+    response = await openai_client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "user", "content": [{"type": "text", "text": "Hello World"}]}
+        ],
+        stream=False,
+    )
+    assert response.choices[0].message.content == "Hello World"

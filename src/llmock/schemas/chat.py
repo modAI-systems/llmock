@@ -8,13 +8,25 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class ContentPart(BaseModel):
+    """A single content part in a message (e.g. text, image_url)."""
+
+    type: str = Field(
+        description="The type of content part, e.g. 'text' or 'image_url'."
+    )
+    text: str | None = Field(
+        default=None,
+        description="The text content (for type='text').",
+    )
+
+
 class ChatMessageRequest(BaseModel):
     """A message in a chat conversation request."""
 
     role: Literal["system", "user", "assistant", "tool"] = Field(
         description="The role of the message author."
     )
-    content: str | None = Field(
+    content: str | list[ContentPart] | None = Field(
         default=None,
         description="The contents of the message.",
     )

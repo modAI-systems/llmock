@@ -20,6 +20,7 @@ from openai.types.chat.chat_completion_chunk import (
 
 from llmock.config import Config, get_config
 from llmock.schemas.chat import ChatCompletionRequest
+from llmock.utils.chat import extract_text_content
 from llmock.strategies import StrategyResponse, StrategyResponseType
 from llmock.strategies.strategy_composition import ChatCompositionStrategy
 
@@ -77,7 +78,11 @@ def create_non_streaming_response(
     completion_id = generate_completion_id()
     created = int(time.time())
 
-    prompt_text = " ".join(msg.content or "" for msg in request.messages if msg.content)
+    prompt_text = " ".join(
+        extract_text_content(msg.content) or ""
+        for msg in request.messages
+        if msg.content
+    )
     prompt_tokens = estimate_tokens(prompt_text)
     completion_tokens = estimate_tokens(
         " ".join(r.content for r in responses if r.content)
@@ -306,7 +311,11 @@ def _create_usage_chunk(
     responses: list[StrategyResponse],
 ) -> ChatCompletionChunk:
     """Create a usage chunk with token counts."""
-    prompt_text = " ".join(msg.content or "" for msg in request.messages if msg.content)
+    prompt_text = " ".join(
+        extract_text_content(msg.content) or ""
+        for msg in request.messages
+        if msg.content
+    )
     prompt_tokens = estimate_tokens(prompt_text)
     completion_tokens = estimate_tokens(" ".join(r.content for r in responses))
 

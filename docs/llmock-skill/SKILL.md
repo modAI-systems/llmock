@@ -74,7 +74,7 @@ Point any OpenAI SDK client at the mock server. The default API key is `your-sec
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8000",
+    base_url="http://localhost:8000/",
     api_key="your-secret-api-key",
 )
 ```
