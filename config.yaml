@@ -26,29 +26,10 @@ models:
 #
 # Available strategies:
 #   MirrorStrategy    - echoes back the last user message
-#   ToolCallStrategy  - triggered by trigger phrase in last user message
-#   ErrorStrategy     - returns config-driven error responses
+#   ToolCallStrategy  - triggered by `call tool '<name>' with '<json>'` phrase in last user message
+#   ErrorStrategy     - triggered by `raise error <json>` phrase in last user message
 #
 strategies:
   - ErrorStrategy
   - ToolCallStrategy
   - MirrorStrategy
-
-# Error messages (optional)
-# Maps message content to error responses. When a request's last user
-# message matches one of these keys exactly, the server returns the
-# configured error instead of a normal response. Works on both
-# /chat/completions and /responses.
-#
-# Each entry needs: status-code, message, type, code
-error-messages:
-  "trigger-429":
-    status-code: 429
-    message: "Rate limit exceeded"
-    type: "rate_limit_error"
-    code: "rate_limit_exceeded"
-  "trigger-500":
-    status-code: 500
-    message: "Internal server error"
-    type: "server_error"
-    code: "internal_error"
