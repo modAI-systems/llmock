@@ -311,3 +311,46 @@ async def test_responses_tool_call_picks_configured_tool(
     data = response.json()
     # Only calculate triggered, not search
     assert data["output"][0]["name"] == "calculate"
+
+
+# ============================================================================
+# Agentic Loop - Follow-up Request (function_call_output present)
+# ============================================================================
+
+
+async def test_responses_tool_call_does_not_fire_when_last_item_is_function_call_output(
+    client: httpx.AsyncClient,
+) -> None:
+    """In an agentic loop the ToolCallStrategy must NOT re-trigger on cycle 2+.
+
+    History: user(trigger) → function_call(tool call) → function_call_output(result)
+    The last item is a FunctionCallOutputItem, so the strategy should return []
+    and NOT produce another tool call response.
+    """
+    response = await client.post(
+        "/responses",
+        json={
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                },
+                {
+                    "type": "function_call_output",
+                    "call_id": "call_abc123",
+                    "output": "4",
+                },
+            ],
+            "tools": [CALCULATOR_TOOL],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    # ToolCallStrategy must NOT fire — the trigger was already processed.
+    # The composition chain falls through → router produces a text message, not a tool call.
+    assert len(data["output"]) > 0
+    assert data["output"][0]["type"] != "function_call", (
+        "ToolCallStrategy should not re-fire when the last item is a function_call_output"
+    )

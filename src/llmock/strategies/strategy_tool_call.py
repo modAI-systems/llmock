@@ -114,9 +114,22 @@ class ChatToolCallStrategy:
     def generate_response(
         self, request: ChatCompletionRequest
     ) -> list[StrategyResponse]:
-        """Return tool call responses extracted from the last user message."""
+        """Return tool call responses extracted from the last user message.
+
+        Returns an empty list when the most recent non-system message is not
+        from the user — this prevents the strategy from re-triggering every
+        cycle of an agentic loop where the original trigger still sits earlier
+        in the conversation history.
+        """
         available = _tool_names_from_chat(request)
         if not available:
+            return []
+        # Only process the trigger when the last non-system turn is the user's.
+        last_role = next(
+            (msg.role for msg in reversed(request.messages) if msg.role != "system"),
+            None,
+        )
+        if last_role != "user":
             return []
         text = extract_last_user_text_chat(request)
         if text is None:
@@ -139,10 +152,28 @@ class ResponseToolCallStrategy:
     def generate_response(
         self, request: ResponseCreateRequest
     ) -> list[StrategyResponse]:
-        """Return tool call responses extracted from the last user input."""
+        """Return tool call responses extracted from the last user input.
+
+        Returns an empty list when the most recent item in the input list is
+        not a user message — this prevents the strategy from re-triggering
+        every cycle of an agentic loop.
+
+        When ``request.input`` is a plain string it is always treated as a
+        fresh user turn.
+        """
         available = _tool_names_from_response(request)
         if not available:
             return []
+        # A plain string is always a fresh user turn — proceed normally.
+        if not isinstance(request.input, str):
+            # For a list input, the last item must be a user-role message.
+            last_item = request.input[-1] if request.input else None
+            if last_item is None:
+                return []
+            last_role = getattr(last_item, "role", None)
+            if last_role != "user":
+                # Covers FunctionCallOutputItem (no role) and assistant items.
+                return []
         text = extract_last_user_text_response(request)
         if text is None:
             return []

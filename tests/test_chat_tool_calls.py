@@ -237,6 +237,92 @@ async def test_tool_call_non_streaming(raw_client: httpx.AsyncClient) -> None:
 # ============================================================================
 
 
+async def test_tool_call_does_not_fire_when_last_message_is_tool_result(
+    raw_client: httpx.AsyncClient,
+) -> None:
+    """In an agentic loop the ToolCallStrategy must NOT re-trigger on cycle 2+.
+
+    History: user(trigger) → assistant(tool_call) → tool(result)
+    The last non-system message is 'tool', so the strategy should return []
+    and NOT produce another tool call response.
+    """
+    response = await raw_client.post(
+        "/chat/completions",
+        json={
+            "model": "gpt-4",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                },
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_abc123",
+                            "type": "function",
+                            "function": {
+                                "name": "calculate",
+                                "arguments": '{"expression": "2+2"}',
+                            },
+                        }
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "content": "4",
+                    "tool_call_id": "call_abc123",
+                },
+            ],
+            "tools": [CALCULATOR_TOOL],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    # ToolCallStrategy must NOT fire — the trigger was already processed.
+    # With only ToolCallStrategy in the chain, it falls through and produces [].
+    assert data["choices"] == [], (
+        "ToolCallStrategy should not re-fire when the last message is a tool result"
+    )
+
+
+async def test_tool_call_does_not_fire_when_last_message_is_assistant(
+    raw_client: httpx.AsyncClient,
+) -> None:
+    """In an agentic loop the ToolCallStrategy must NOT re-trigger when the last
+    message is an assistant message (e.g. after the model replied with text).
+
+    History: user(trigger) → assistant(text reply)
+    """
+    response = await raw_client.post(
+        "/chat/completions",
+        json={
+            "model": "gpt-4",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                },
+                {
+                    "role": "assistant",
+                    "content": "The result is 4.",
+                },
+            ],
+            "tools": [CALCULATOR_TOOL],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["choices"] == [], (
+        "ToolCallStrategy should not fire when the last message is from the assistant"
+    )
+
+
 # ============================================================================
 # Tool ignored when not in config
 # ============================================================================
