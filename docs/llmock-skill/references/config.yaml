@@ -26,7 +26,7 @@ models:
 #
 # Available strategies:
 #   MirrorStrategy    - echoes back the last user message
-#   ToolCallStrategy  - returns config-driven tool calls
+#   ToolCallStrategy  - triggered by trigger phrase in last user message
 #   ErrorStrategy     - returns config-driven error responses
 #
 strategies:
@@ -52,15 +52,3 @@ error-messages:
     message: "Internal server error"
     type: "server_error"
     code: "internal_error"
-
-# Tool call strategy configuration (optional)
-# Maps function names to their mock response arguments (JSON strings).
-# When response-strategy is set to ToolCallStrategy, the strategy looks up
-# each tool by name. If found here, it responds with a tool call using
-# these arguments. Tools not listed here are ignored.
-#
-# Example:
-#   tool-calls:
-#     calculate: '{"expression": "2+2"}'
-#     get_weather: '{"location": "San Francisco", "unit": "celsius"}'
-#     search: '{"query": "example search"}'

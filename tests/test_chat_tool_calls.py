@@ -47,23 +47,16 @@ SEARCH_TOOL = {
     },
 }
 
-# Config with tool-calls mapping
-TOOL_CALLS_CONFIG = {
-    "calculate": '{"expression": "2+2"}',
-    "search": '{"query": "test search"}',
-}
-
 
 @pytest.fixture
 def test_config() -> Config:
-    """Provide test config with a model and tool-calls."""
+    """Provide test config with ToolCallStrategy"""
     return {
         "models": [
             {"id": "gpt-4", "created": 1700000000, "owned_by": "openai"},
         ],
         "api-key": TEST_API_KEY,
         "strategies": ["ToolCallStrategy"],
-        "tool-calls": TOOL_CALLS_CONFIG,
     }
 
 
@@ -106,14 +99,17 @@ async def raw_client(test_config: Config) -> AsyncGenerator[httpx.AsyncClient, N
 
 
 async def test_tool_call_streaming_first_request(raw_client: httpx.AsyncClient) -> None:
-    """Test streaming tool call response when tools are present and configured."""
+    """Test streaming tool call response when trigger phrase is present."""
     async with raw_client.stream(
         "POST",
         "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [
-                {"role": "user", "content": "Calculate 6*7"},
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                },
             ],
             "tools": [CALCULATOR_TOOL],
             "stream": True,
@@ -176,7 +172,9 @@ async def test_tool_call_streaming_has_unique_tool_call_id(
             "/chat/completions",
             json={
                 "model": "gpt-4",
-                "messages": [{"role": "user", "content": "test"}],
+                "messages": [
+                    {"role": "user", "content": "call tool 'calculate' with '{}'"}
+                ],
                 "tools": [CALCULATOR_TOOL],
                 "stream": True,
             },
@@ -196,13 +194,16 @@ async def test_tool_call_streaming_has_unique_tool_call_id(
 
 
 async def test_tool_call_non_streaming(raw_client: httpx.AsyncClient) -> None:
-    """Test non-streaming tool call response uses config arguments."""
+    """Test non-streaming tool call response using trigger phrase arguments."""
     response = await raw_client.post(
         "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [
-                {"role": "user", "content": "Calculate 6*7"},
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                },
             ],
             "tools": [CALCULATOR_TOOL],
             "stream": False,
@@ -267,7 +268,9 @@ async def test_tool_call_unconfigured_tool_returns_warning(
 
     assert response.status_code == 200
     data = response.json()
-    assert data["choices"] == []
+    assert (
+        data["choices"] == []
+    )  # no trigger phrase → ToolCallStrategy falls through → empty
 
 
 # ============================================================================
@@ -276,13 +279,20 @@ async def test_tool_call_unconfigured_tool_returns_warning(
 
 
 async def test_tool_call_picks_configured_tool(raw_client: httpx.AsyncClient) -> None:
-    """Test that only tools in config are called, not just first in list."""
-    # Config has both calculate and search, so first matching is used
+    """Test that multiple trigger lines each produce a separate tool call choice."""
     response = await raw_client.post(
         "/chat/completions",
         json={
             "model": "gpt-4",
-            "messages": [{"role": "user", "content": "find something"}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "call tool 'calculate' with '{\"expression\": \"2+2\"}'"
+                        "\ncall tool 'search' with '{\"query\": \"test search\"}'"
+                    ),
+                }
+            ],
             "tools": [CALCULATOR_TOOL, SEARCH_TOOL],
             "stream": False,
         },
@@ -290,7 +300,7 @@ async def test_tool_call_picks_configured_tool(raw_client: httpx.AsyncClient) ->
 
     assert response.status_code == 200
     data = response.json()
-    # Both tools are in config, so each becomes its own choice
+    # Both trigger lines fire, each becomes its own choice
     assert len(data["choices"]) == 2
     assert (
         data["choices"][0]["message"]["tool_calls"][0]["function"]["name"]

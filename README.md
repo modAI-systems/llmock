@@ -95,26 +95,29 @@ print(response.output[0].content[0].text)
 
 ### Tool Calling
 
-When `ToolCallStrategy` is included in the `strategies` list in `config.yaml` and matching `tool-calls` entries exist, llmock responds with tool calls using the configured arguments. If no tools match the config, the next strategy in the chain is tried.
+When `ToolCallStrategy` is included in the `strategies` list, llmock watches the last user message for lines matching the pattern:
+
+```
+call tool '<name>' with '<json>'
+```
+
+- `<name>` must match one of the tools declared in `tools`.
+- `<json>` is the arguments string passed to the tool (use `'{}'` for no arguments).
+- Multiple matching lines produce multiple tool calls.
+- If no line matches, the strategy falls through to the next one (e.g. `MirrorStrategy`).
+
+No extra config keys are needed — adding `ToolCallStrategy` to the `strategies` list is sufficient.
 
 This works on both `/chat/completions` and `/responses` endpoints.
 
 #### Configuration
-
-Include `ToolCallStrategy` in the `strategies` list and add a `tool-calls` section to `config.yaml`:
 
 ```yaml
 strategies:
   - ErrorStrategy
   - ToolCallStrategy
   - MirrorStrategy
-
-tool-calls:
-  calculate: '{"expression": "2+2"}'
-  get_weather: '{"location": "San Francisco", "unit": "celsius"}'
 ```
-
-When a request includes a tool named `calculate`, the mock responds with a tool call whose arguments are `{"expression": "2+2"}`.
 
 #### Chat Completions API
 
@@ -125,7 +128,7 @@ client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
 
 response = client.chat.completions.create(
     model="gpt-4o",
-    messages=[{"role": "user", "content": "Calculate 6*7"}],
+    messages=[{"role": "user", "content": "call tool 'calculate' with '{\"expression\": \"6*7\"}'"}],
     tools=[{
         "type": "function",
         "function": {
@@ -140,7 +143,7 @@ response = client.chat.completions.create(
 )
 tool_call = response.choices[0].message.tool_calls[0]
 # tool_call.function.name == "calculate"
-# tool_call.function.arguments == '{"expression": "2+2"}'  (from config)
+# tool_call.function.arguments == '{"expression": "6*7"}'  (from trigger phrase)
 ```
 
 #### Responses API
@@ -152,7 +155,7 @@ client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
 
 response = client.responses.create(
     model="gpt-4o",
-    input="Calculate 6*7",
+    input="call tool 'calculate' with '{\"expression\": \"6*7\"}'",
     tools=[{
         "type": "function",
         "name": "calculate",
@@ -165,7 +168,7 @@ response = client.responses.create(
 )
 function_call = response.output[0]
 # function_call.name == "calculate"
-# function_call.arguments == '{"expression": "2+2"}'  (from config)
+# function_call.arguments == '{"expression": "6*7"}'  (from trigger phrase)
 ```
 
 ### Error Message Simulation
@@ -246,11 +249,6 @@ error-messages:
     message: "Internal server error"
     type: "server_error"
     code: "internal_error"
-
-# Optional: configure tool call mock responses (used by ToolCallStrategy)
-tool-calls:
-  calculate: '{"expression": "2+2"}'
-  get_weather: '{"location": "San Francisco", "unit": "celsius"}'
 
 ### Environment Variable Overrides
 

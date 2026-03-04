@@ -39,23 +39,16 @@ SEARCH_TOOL = {
     },
 }
 
-# Config mapping for tool responses
-TOOL_CALLS_CONFIG = {
-    "calculate": '{"expression": "2+2"}',
-    "search": '{"query": "test search"}',
-}
-
 
 @pytest.fixture
 def test_config() -> Config:
-    """Provide test config with a model and tool-calls."""
+    """Provide test config with ToolCallStrategy."""
     return {
         "models": [
             {"id": "gpt-4o", "created": 1700000000, "owned_by": "openai"},
         ],
         "api-key": TEST_API_KEY,
         "strategies": ["ToolCallStrategy"],
-        "tool-calls": TOOL_CALLS_CONFIG,
     }
 
 
@@ -85,7 +78,12 @@ async def test_responses_tool_call_non_streaming(client: httpx.AsyncClient) -> N
         "/responses",
         json={
             "model": "gpt-4o",
-            "input": [{"role": "user", "content": "Calculate 6*7"}],
+            "input": [
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                }
+            ],
             "tools": [CALCULATOR_TOOL],
         },
     )
@@ -120,7 +118,12 @@ async def test_responses_tool_call_streaming(client: httpx.AsyncClient) -> None:
         "/responses",
         json={
             "model": "gpt-4o",
-            "input": [{"role": "user", "content": "Calculate 6*7"}],
+            "input": [
+                {
+                    "role": "user",
+                    "content": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+                }
+            ],
             "tools": [CALCULATOR_TOOL],
             "stream": True,
         },
@@ -183,7 +186,7 @@ async def test_responses_tool_call_unique_ids(client: httpx.AsyncClient) -> None
             "/responses",
             json={
                 "model": "gpt-4o",
-                "input": "test",
+                "input": "call tool 'calculate' with '{}'",
                 "tools": [CALCULATOR_TOOL],
             },
         )
@@ -235,12 +238,12 @@ async def test_responses_normal_without_tools() -> None:
 async def test_responses_tool_call_with_string_input(
     client: httpx.AsyncClient,
 ) -> None:
-    """Test tool call when input is a simple string."""
+    """Test tool call when input is a string containing the trigger phrase."""
     response = await client.post(
         "/responses",
         json={
             "model": "gpt-4o",
-            "input": "Calculate 6*7",
+            "input": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
             "tools": [CALCULATOR_TOOL],
         },
     )
@@ -261,7 +264,7 @@ async def test_responses_tool_call_with_string_input(
 async def test_responses_unconfigured_tool_returns_warning(
     client: httpx.AsyncClient,
 ) -> None:
-    """Test that unconfigured tools return a warning text message."""
+    """Test that no trigger phrase means ToolCallStrategy falls through."""
     unknown_tool = {
         "type": "function",
         "name": "unknown_func",
@@ -274,14 +277,14 @@ async def test_responses_unconfigured_tool_returns_warning(
         "/responses",
         json={
             "model": "gpt-4o",
-            "input": "Hello world!",
+            "input": "Hello world!",  # no trigger phrase
             "tools": [unknown_tool],
         },
     )
 
     assert response.status_code == 200
     data = response.json()
-    # No configured tools matched — output contains an empty message
+    # No trigger phrase → ToolCallStrategy returns [] → output is empty text message
     assert data["output"][0]["type"] == "message"
     assert data["output"][0]["content"][0]["text"] == ""
 
@@ -294,17 +297,17 @@ async def test_responses_unconfigured_tool_returns_warning(
 async def test_responses_tool_call_picks_configured_tool(
     client: httpx.AsyncClient,
 ) -> None:
-    """Test that only tools in config are called."""
+    """Test that only the tool named in the trigger phrase fires."""
     response = await client.post(
         "/responses",
         json={
             "model": "gpt-4o",
-            "input": "find something",
+            "input": "call tool 'calculate' with '{\"expression\": \"2+2\"}'",
             "tools": [CALCULATOR_TOOL, SEARCH_TOOL],
         },
     )
 
     assert response.status_code == 200
     data = response.json()
-    # First configured tool (calculate) is the first in the output
+    # Only calculate triggered, not search
     assert data["output"][0]["name"] == "calculate"

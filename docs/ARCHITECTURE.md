@@ -66,10 +66,9 @@ ResponseStrategy {
 - `ChatMirrorStrategy`: Extract last user message → return `[StrategyResponse(type="text", content=...)]`
 - `ResponseMirrorStrategy`: Extract last user input → return `[StrategyResponse(type="text", content=...)]`
 
-**Tool Call Strategies** (config-driven):
-- `ChatToolCallStrategy` (Chat Completions): Reads `tool-calls` from config. Goes through each tool in the request, looks up by name in config. Configured tools → `StrategyResponse(type="tool_call")`, unconfigured tools → ignored with warning message.
-- `ResponseToolCallStrategy` (Responses API): Same config-driven logic.
-- If no tools match config → returns a text warning message.
+**Tool Call Strategies** (trigger phrase–driven):
+- `ChatToolCallStrategy` (Chat Completions): Parses the **last user message** line-by-line for the pattern `call tool '<name>' with '<json>'`. Each matching line whose `<name>` appears in `request.tools` produces a `StrategyResponse(type="tool_call")` with the extracted JSON arguments. Multiple matching lines produce multiple responses. If no line matches, returns an empty list (falls through to the next strategy). No config keys required.
+- `ResponseToolCallStrategy` (Responses API): Same trigger-phrase logic but operates on `ResponseCreateRequest` inputs (string or structured message list).
 - Both support streaming and non-streaming modes.
 
 **Strategy Factory**:
@@ -133,13 +132,11 @@ error-messages:
     type: "server_error"
     code: "internal_error"
 
-# Config-driven tool call responses (used by ToolCallStrategy)
-tool-calls:
-  calculate: '{"expression": "2+2"}'
-  get_weather: '{"location": "San Francisco", "unit": "celsius"}'
 ```
 
 The `strategies` field is an ordered list of strategy names to try. The composition strategy runs them in order; the first one that returns a non-empty result wins. If omitted, `["MirrorStrategy"]` is the default.
+
+`ToolCallStrategy` fires when the last user message contains a line matching `call tool '<name>' with '<json>'` and `<name>` is present in `request.tools`.
 
 The `error-messages` section maps message content strings to error responses. When a request's last user message matches a key in `error-messages` exactly, the server returns the configured HTTP error instead of a normal response. Each entry requires `status-code`, `message`, `type`, and `code`.
 
