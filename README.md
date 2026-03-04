@@ -1,7 +1,7 @@
 # LLM Mock
 
 [![CI](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml/badge.svg)](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/guenhter/e105735f20b2a01389046b1b6dd9a5e5/raw/llmock-junit-tests.json)](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml)
+[![Unit Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/guenhter/e105735f20b2a01389046b1b6dd9a5e5/raw/llmock-junit-tests.json)](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 OpenAI-compatible mock server for testing LLM integrations.
