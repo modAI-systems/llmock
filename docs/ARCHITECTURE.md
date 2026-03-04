@@ -39,48 +39,109 @@ Response
 
 ### Strategy Pattern
 
+**Response Type**:
+```python
+@dataclass
+class StrategyResponse:
+    type: str              # "text", "tool_call", or "error"
+    content: str           # Text content, tool call arguments, or error message
+    name: str | None       # Function name (for tool_call type)
+    status_code: int | None    # HTTP status code (for error type)
+    error_type: str | None     # Error type string (for error type)
+    error_code: str | None     # Error code string (for error type)
+```
+
 **Interfaces**:
 ```
 ChatStrategy {
-  generateResponse(request) → string
+  generateResponse(request) → list[StrategyResponse]
 }
 
 ResponseStrategy {
-  generateResponse(request) → string
+  generateResponse(request) → list[StrategyResponse]
 }
 ```
 
 **Default Strategies (MirrorStrategy)**:
-- `ChatMirrorStrategy`: Extract last user message → return as assistant message
-- `ResponseMirrorStrategy`: Extract last user input → return as response text
+- `ChatMirrorStrategy`: Extract last user message → return `[StrategyResponse(type="text", content=...)]`
+- `ResponseMirrorStrategy`: Extract last user input → return `[StrategyResponse(type="text", content=...)]`
+
+**Tool Call Strategies** (config-driven):
+- `ChatToolCallStrategy` (Chat Completions): Reads `tool-calls` from config. Goes through each tool in the request, looks up by name in config. Configured tools → `StrategyResponse(type="tool_call")`, unconfigured tools → ignored with warning message.
+- `ResponseToolCallStrategy` (Responses API): Same config-driven logic.
+- If no tools match config → returns a text warning message.
+- Both support streaming and non-streaming modes.
+
+**Strategy Factory**:
+- `create_chat_strategy(config)` / `create_response_strategy(config)` — reads `response-strategy` from config, looks up the class pair in a registry, and instantiates with the full config.
+- All strategies accept `config: dict` in their constructor and read their own section.
+- Short names used in config: `MirrorStrategy`, `ToolCallStrategy`.
+- Falls back to `MirrorStrategy` when `response-strategy` is unset or unrecognised.
+
+**Composition Strategy** (used by routers):
+- `ChatCompositionStrategy` / `ResponseCompositionStrategy` — reads the `strategies` list from config, creates each sub-strategy via the factory registry, and runs them in order.
+- The first strategy that returns a **non-empty** `list[StrategyResponse]` wins; remaining strategies are not called.
+- Default when `strategies` is missing: `["MirrorStrategy"]`.
+- Unknown strategy names are skipped with a warning.
+- Not registered in the factory — it **wraps** the factory internally.
+- Both routers (`/v1/chat/completions` and `/v1/responses`) instantiate the composition strategy directly.
+
+**Error Strategies** (config-driven):
+- `ChatErrorStrategy` / `ResponseErrorStrategy`: Read `error-messages` from config. If the last user message content matches a key in `error-messages`, return `StrategyResponse(type="error", ...)` with the configured status code, message, type, and code. Otherwise return empty list (no error).
+- Error check happens after model validation but before the main response strategy runs.
+- Only the last user message is checked (system/assistant/tool messages are ignored).
+- Separate from the main strategy factory — created via `create_chat_error_strategy(config)` / `create_response_error_strategy(config)`.
+- Typically placed first in the `strategies` list so errors take priority.
 
 **Future Strategies**: FixedResponse, Template, Random, AIProxy
 
 ## Configuration
 
-**config/server.yaml**
+**config.yaml**:
 ```yaml
-server:
-  host: 0.0.0.0
-  port: 8080
+api-key: "your-secret-api-key"
+
+# Ordered list of strategies (first non-empty result wins)
 strategies:
-  default: mirror
-```
+  - ErrorStrategy
+  - ToolCallStrategy
+  - MirrorStrategy
 
-**config/auth.yaml**
-```yaml
-valid_api_keys:
-  - sk-mock-key-default
-```
-
-**config/models.yaml**
-```yaml
 models:
   - id: gpt-4o
-    object: model
-    created: 1678000000
+    created: 1715367049
     owned_by: openai
+  - id: gpt-4o-mini
+    created: 1721172741
+    owned_by: openai
+
+# Config-driven error responses (triggered by message content)
+error-messages:
+  "trigger-401":
+    status-code: 401
+    message: "Invalid API key"
+    type: "authentication_error"
+    code: "invalid_api_key"
+  "trigger-429":
+    status-code: 429
+    message: "Rate limit exceeded"
+    type: "rate_limit_error"
+    code: "rate_limit_exceeded"
+  "trigger-500":
+    status-code: 500
+    message: "Internal server error"
+    type: "server_error"
+    code: "internal_error"
+
+# Config-driven tool call responses (used by ToolCallStrategy)
+tool-calls:
+  calculate: '{"expression": "2+2"}'
+  get_weather: '{"location": "San Francisco", "unit": "celsius"}'
 ```
+
+The `strategies` field is an ordered list of strategy names to try. The composition strategy runs them in order; the first one that returns a non-empty result wins. If omitted, `["MirrorStrategy"]` is the default.
+
+The `error-messages` section maps message content strings to error responses. When a request's last user message matches a key in `error-messages` exactly, the server returns the configured HTTP error instead of a normal response. Each entry requires `status-code`, `message`, `type`, and `code`.
 
 ## Endpoints
 
@@ -91,9 +152,32 @@ Returns configured model list. [OpenAI Spec](https://platform.openai.com/docs/ap
 
 ### POST /v1/chat/completions
 Chat-style completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/chat/create)
+- Supports `tools` for tool calling
+- Supports `stream_options.include_usage` for usage stats in streaming
+- Message content matching `error-messages` config returns HTTP errors (see Error Messages below)
 
 ### POST /v1/responses
 OpenAI's newer Responses API with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/responses)
+- Supports `tools` for tool calling (Responses API format: flat `{"type": "function", "name": ...}` tools)
+- Message content matching `error-messages` config returns HTTP errors (see Error Messages below)
+
+## Error Messages
+
+Error responses are fully config-driven via the `error-messages` section in `config.yaml`. When a request's last user message content matches a key in `error-messages` exactly, the server returns the configured HTTP error instead of a normal response.
+
+Default configuration:
+
+| Message Content   | HTTP Status | Error Type              | Message                  |
+|------------------|-------------|-------------------------|--------------------------|
+| `trigger-401`    | 401         | `authentication_error`  | Invalid API key          |
+| `trigger-429`    | 429         | `rate_limit_error`      | Rate limit exceeded      |
+| `trigger-500`    | 500         | `server_error`          | Internal server error    |
+
+Custom error triggers can be added by adding entries to the `error-messages` section with any message string and custom status code, message, type, and code.
+
+Only the last user message is checked. System/assistant/tool messages are ignored.
+Model validation happens first, so the model must be valid.
+Works on both `/v1/chat/completions` and `/v1/responses`.
 
 ## Streaming (SSE)
 
