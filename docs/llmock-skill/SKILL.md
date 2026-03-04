@@ -98,11 +98,11 @@ strategies:
   - MirrorStrategy     # Fall back to echoing input
 ```
 
-| Strategy | Config Section Required | Behavior |
-|----------|----------------------|----------|
-| `MirrorStrategy` | None | Echoes the last user message |
-| `ToolCallStrategy` | None | Returns tool calls parsed from the trigger phrase in the last user message |
-| `ErrorStrategy` | `error-messages` | Returns HTTP errors when message content matches a trigger |
+| Strategy | Behavior |
+|----------|----------|
+| `MirrorStrategy` | Echoes the last user message |
+| `ToolCallStrategy` | Returns tool calls triggered by `call tool '<name>' with '<json>'` phrase in the last user message |
+| `ErrorStrategy` | Returns HTTP errors triggered by `raise error <json>` phrase in the last user message |
 
 If `strategies` is omitted, defaults to `["MirrorStrategy"]`. Unknown names are skipped with a warning.
 
@@ -164,18 +164,6 @@ strategies:
   - ErrorStrategy
   - ToolCallStrategy
   - MirrorStrategy
-
-error-messages:
-  "trigger-429":
-    status-code: 429
-    message: "Rate limit exceeded"
-    type: "rate_limit_error"
-    code: "rate_limit_exceeded"
-  "trigger-500":
-    status-code: 500
-    message: "Internal server error"
-    type: "server_error"
-    code: "internal_error"
 ```
 
 ### Tool Calling
@@ -193,7 +181,42 @@ call tool '<name>' with '<json>'
 
 ### Error Simulation
 
-When `ErrorStrategy` is in the strategies list and the last user message matches a key in `error-messages` exactly (case-sensitive), the server returns the configured HTTP error. Only the last user message is checked. System/assistant/tool messages are ignored.
+When `ErrorStrategy` is in the strategies list, llmock scans the last user message line-by-line for the pattern:
+
+```
+raise error {"code": 429, "message": "Rate limit exceeded"}
+```
+
+| Field | Required | Maps to |
+|-------|----------|---------|
+| `code` | yes (int) | HTTP response status code (e.g. `429`) |
+| `message` | yes (string) | `error.message` in the JSON body |
+| `type` | no (string) | `error.type` in the JSON body — defaults to `"api_error"` |
+| `error_code` | no (string) | `error.code` in the JSON body — defaults to `"error"` |
+
+Example with all fields:
+
+```
+raise error {"code": 429, "message": "Rate limit exceeded", "type": "rate_limit_error", "error_code": "rate_limit_exceeded"}
+```
+
+Produces HTTP 429 with body:
+
+```json
+{
+  "error": {
+    "message": "Rate limit exceeded",
+    "type": "rate_limit_error",
+    "param": null,
+    "code": "rate_limit_exceeded"
+  }
+}
+```
+
+- The phrase can appear anywhere in the message — the line is scanned, not the whole message.
+- First matching line wins; remaining lines are ignored.
+- If no line matches, the strategy returns an empty list and the next strategy runs.
+- Works on both `/chat/completions` and `/responses`.
 
 ## Default Models
 

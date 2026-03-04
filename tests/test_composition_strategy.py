@@ -15,22 +15,19 @@ TEST_API_KEY = "test-api-key"
 
 
 def test_chat_composition_error_takes_priority() -> None:
-    """ErrorStrategy fires before MirrorStrategy when the message triggers it."""
+    """ErrorStrategy fires before MirrorStrategy when the message contains a trigger phrase."""
     config = {
         "strategies": ["ErrorStrategy", "MirrorStrategy"],
-        "error-messages": {
-            "boom": {
-                "status-code": 500,
-                "message": "Server error",
-                "type": "server_error",
-                "code": "server_error",
-            },
-        },
     }
     strategy = ChatCompositionStrategy(config)
     request = ChatCompletionRequest(
         model="gpt-4",
-        messages=[ChatMessageRequest(role="user", content="boom")],
+        messages=[
+            ChatMessageRequest(
+                role="user",
+                content='raise error {"code": 500, "message": "Server error"}',
+            )
+        ],
     )
     result = strategy.generate_response(request)
     assert len(result) == 1
@@ -42,14 +39,6 @@ def test_chat_composition_falls_through_to_mirror() -> None:
     """ErrorStrategy returns empty for normal messages, MirrorStrategy answers."""
     config = {
         "strategies": ["ErrorStrategy", "MirrorStrategy"],
-        "error-messages": {
-            "boom": {
-                "status-code": 500,
-                "message": "Server error",
-                "type": "server_error",
-                "code": "server_error",
-            },
-        },
     }
     strategy = ChatCompositionStrategy(config)
     request = ChatCompletionRequest(

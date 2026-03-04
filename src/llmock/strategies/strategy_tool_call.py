@@ -22,7 +22,6 @@ No configuration keys are required.  Adding ``ToolCallStrategy`` to the
       - MirrorStrategy
 """
 
-import json
 import logging
 import re
 from typing import Any
@@ -90,13 +89,6 @@ def _parse_triggers(text: str, available_tools: set[str]) -> list[StrategyRespon
             logger.debug("Trigger tool '%s' not in request.tools — skipped", name)
             continue
         effective_args = args_str if args_str else "{}"
-        try:
-            json.loads(effective_args)
-        except json.JSONDecodeError:
-            logger.warning(
-                "Invalid JSON in trigger for tool '%s' — skipped: %r", name, args_str
-            )
-            continue
         responses.append(tool_response(effective_args, name))
     return responses
 

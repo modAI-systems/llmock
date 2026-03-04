@@ -85,12 +85,10 @@ ResponseStrategy {
 - Not registered in the factory — it **wraps** the factory internally.
 - Both routers (`/chat/completions` and `/responses`) instantiate the composition strategy directly.
 
-**Error Strategies** (config-driven):
-- `ChatErrorStrategy` / `ResponseErrorStrategy`: Read `error-messages` from config. If the last user message content matches a key in `error-messages`, return `StrategyResponse(type="error", ...)` with the configured status code, message, type, and code. Otherwise return empty list (no error).
-- Error check happens after model validation but before the main response strategy runs.
+**Error Strategies** (trigger phrase–driven):
+- `ChatErrorStrategy` / `ResponseErrorStrategy`: Scan the last user message line-by-line for `raise error <json>`. JSON must contain `code` (int) and `message` (str); optional `type` and `error_code`. First matching line wins. No config required.
 - Only the last user message is checked (system/assistant/tool messages are ignored).
-- Separate from the main strategy factory — created via `create_chat_error_strategy(config)` / `create_response_error_strategy(config)`.
-- Typically placed first in the `strategies` list so errors take priority.
+- Registered in the factory under `"ErrorStrategy"` — place first in the `strategies` list so errors take priority.
 
 **Future Strategies**: FixedResponse, Template, Random, AIProxy
 
@@ -114,31 +112,13 @@ models:
     created: 1721172741
     owned_by: openai
 
-# Config-driven error responses (triggered by message content)
-error-messages:
-  "trigger-401":
-    status-code: 401
-    message: "Invalid API key"
-    type: "authentication_error"
-    code: "invalid_api_key"
-  "trigger-429":
-    status-code: 429
-    message: "Rate limit exceeded"
-    type: "rate_limit_error"
-    code: "rate_limit_exceeded"
-  "trigger-500":
-    status-code: 500
-    message: "Internal server error"
-    type: "server_error"
-    code: "internal_error"
-
 ```
 
 The `strategies` field is an ordered list of strategy names to try. The composition strategy runs them in order; the first one that returns a non-empty result wins. If omitted, `["MirrorStrategy"]` is the default.
 
 `ToolCallStrategy` fires when the last user message contains a line matching `call tool '<name>' with '<json>'` and `<name>` is present in `request.tools`.
 
-The `error-messages` section maps message content strings to error responses. When a request's last user message matches a key in `error-messages` exactly, the server returns the configured HTTP error instead of a normal response. Each entry requires `status-code`, `message`, `type`, and `code`.
+`ErrorStrategy` fires when the last user message contains a line matching `raise error <json>`, where `<json>` has at least `code` (int) and `message` (str).
 
 ## Endpoints
 
@@ -151,30 +131,12 @@ Returns configured model list. [OpenAI Spec](https://platform.openai.com/docs/ap
 Chat-style completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/chat/create)
 - Supports `tools` for tool calling
 - Supports `stream_options.include_usage` for usage stats in streaming
-- Message content matching `error-messages` config returns HTTP errors (see Error Messages below)
+- `raise error <json>` trigger phrase in last user message returns the configured HTTP error
 
 ### POST /responses
 OpenAI's newer Responses API with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/responses)
 - Supports `tools` for tool calling (Responses API format: flat `{"type": "function", "name": ...}` tools)
-- Message content matching `error-messages` config returns HTTP errors (see Error Messages below)
-
-## Error Messages
-
-Error responses are fully config-driven via the `error-messages` section in `config.yaml`. When a request's last user message content matches a key in `error-messages` exactly, the server returns the configured HTTP error instead of a normal response.
-
-Default configuration:
-
-| Message Content   | HTTP Status | Error Type              | Message                  |
-|------------------|-------------|-------------------------|--------------------------|
-| `trigger-401`    | 401         | `authentication_error`  | Invalid API key          |
-| `trigger-429`    | 429         | `rate_limit_error`      | Rate limit exceeded      |
-| `trigger-500`    | 500         | `server_error`          | Internal server error    |
-
-Custom error triggers can be added by adding entries to the `error-messages` section with any message string and custom status code, message, type, and code.
-
-Only the last user message is checked. System/assistant/tool messages are ignored.
-Model validation happens first, so the model must be valid.
-Works on both `/chat/completions` and `/responses`.
+- `raise error <json>` trigger phrase in last user message returns the configured HTTP error
 
 ## Streaming (SSE)
 
