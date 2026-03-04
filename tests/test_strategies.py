@@ -328,7 +328,13 @@ def test_chat_tool_call_strategy_empty_args_normalised() -> None:
 
 
 def test_chat_tool_call_strategy_last_message_is_tool_role() -> None:
-    """Test that strategy falls through when last message has role 'tool'."""
+    """Strategy must NOT fire when the last non-system message has role 'tool'.
+
+    In an agentic loop the conversation history looks like:
+        user(trigger) → assistant(tool_call) → tool(result)
+    The trigger phrase still lives in the user message, but the last turn
+    belongs to the tool.  Firing again would create an infinite loop.
+    """
     strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
@@ -345,12 +351,8 @@ def test_chat_tool_call_strategy_last_message_is_tool_role() -> None:
 
     result = strategy.generate_response(request)
 
-    # Last user message contains the trigger but the very last msg is tool —
-    # the strategy must still scan back to find the user message.
-    # For now we check that the result is NOT empty (user trigger found).
-    # The infinite-loop prevention works because on a real follow-up cycle
-    # the tool result sits after the trigger and the user content hasn't changed.
-    assert len(result) == 1
+    # The last non-system message is 'tool' → strategy must fall through.
+    assert result == []
 
 
 # ============================================================================
