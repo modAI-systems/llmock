@@ -38,7 +38,7 @@ strategies:
 # Maps message content to error responses. When a request's last user
 # message matches one of these keys exactly, the server returns the
 # configured error instead of a normal response. Works on both
-# /v1/chat/completions and /v1/responses.
+# /chat/completions and /responses.
 #
 # Each entry needs: status-code, message, type, code
 error-messages:

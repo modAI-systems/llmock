@@ -1,4 +1,4 @@
-"""Tests for the /v1/models endpoint using official OpenAI client."""
+"""Tests for the /models endpoint using official OpenAI client."""
 
 from collections.abc import AsyncGenerator
 
@@ -39,7 +39,7 @@ async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None
         client = AsyncOpenAI(
             api_key=TEST_API_KEY,
             http_client=http_client,
-            base_url="http://testserver/v1",
+            base_url="http://testserver",
         )
         yield client
 

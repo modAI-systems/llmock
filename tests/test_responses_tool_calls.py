@@ -1,4 +1,4 @@
-"""Tests for tool calling support in /v1/responses."""
+"""Tests for tool calling support in /responses."""
 
 import json
 from collections.abc import AsyncGenerator
@@ -82,7 +82,7 @@ async def client(test_config: Config) -> AsyncGenerator[httpx.AsyncClient, None]
 async def test_responses_tool_call_non_streaming(client: httpx.AsyncClient) -> None:
     """Test non-streaming tool call response via Responses API."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": [{"role": "user", "content": "Calculate 6*7"}],
@@ -117,7 +117,7 @@ async def test_responses_tool_call_streaming(client: httpx.AsyncClient) -> None:
     """Test streaming tool call response via Responses API."""
     async with client.stream(
         "POST",
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": [{"role": "user", "content": "Calculate 6*7"}],
@@ -180,7 +180,7 @@ async def test_responses_tool_call_unique_ids(client: httpx.AsyncClient) -> None
     call_ids = []
     for _ in range(3):
         response = await client.post(
-            "/v1/responses",
+            "/responses",
             json={
                 "model": "gpt-4o",
                 "input": "test",
@@ -214,7 +214,7 @@ async def test_responses_normal_without_tools() -> None:
         headers={"Authorization": f"Bearer {TEST_API_KEY}"},
     ) as mirror_client:
         response = await mirror_client.post(
-            "/v1/responses",
+            "/responses",
             json={
                 "model": "gpt-4o",
                 "input": "Hello world!",
@@ -237,7 +237,7 @@ async def test_responses_tool_call_with_string_input(
 ) -> None:
     """Test tool call when input is a simple string."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": "Calculate 6*7",
@@ -271,7 +271,7 @@ async def test_responses_unconfigured_tool_returns_warning(
         },
     }
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": "Hello world!",
@@ -296,7 +296,7 @@ async def test_responses_tool_call_picks_configured_tool(
 ) -> None:
     """Test that only tools in config are called."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": "find something",

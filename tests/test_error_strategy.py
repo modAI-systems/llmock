@@ -61,7 +61,7 @@ async def client(test_config: Config) -> AsyncGenerator[httpx.AsyncClient, None]
 async def test_chat_configured_error(client: httpx.AsyncClient) -> None:
     """Test that a configured error message triggers the correct HTTP error response."""
     response = await client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "trigger-500"}],
@@ -79,7 +79,7 @@ async def test_chat_configured_error(client: httpx.AsyncClient) -> None:
 async def test_chat_error_with_streaming(client: httpx.AsyncClient) -> None:
     """Test error message returns error even when stream=true (not SSE)."""
     response = await client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "trigger-500"}],
@@ -96,7 +96,7 @@ async def test_chat_error_with_streaming(client: httpx.AsyncClient) -> None:
 async def test_chat_normal_message_not_affected(client: httpx.AsyncClient) -> None:
     """Test that normal messages are not treated as error triggers."""
     response = await client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "hello"}],
@@ -111,7 +111,7 @@ async def test_chat_error_uses_last_user_message(
 ) -> None:
     """Test error check uses the last user message, not earlier ones."""
     response = await client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [
@@ -131,7 +131,7 @@ async def test_chat_invalid_model_returns_404(
 ) -> None:
     """Test that invalid model returns 404 even with error message."""
     response = await client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "nonexistent-model",
             "messages": [{"role": "user", "content": "trigger-500"}],
@@ -150,7 +150,7 @@ async def test_chat_invalid_model_returns_404(
 async def test_responses_configured_error(client: httpx.AsyncClient) -> None:
     """Test that a configured error message triggers the correct HTTP error in responses endpoint."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4",
             "input": "trigger-500",
@@ -167,7 +167,7 @@ async def test_responses_configured_error(client: httpx.AsyncClient) -> None:
 async def test_responses_error_with_streaming(client: httpx.AsyncClient) -> None:
     """Test error message in responses endpoint with streaming returns JSON error."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4",
             "input": "trigger-500",

@@ -3,7 +3,7 @@ name: llmock-skill
 description: >-
   Run and configure llmock via Docker, an OpenAI-compatible mock server for
   testing LLM integrations. Use when you need a local mock for OpenAI endpoints
-  (/v1/models, /v1/chat/completions, /v1/responses), when testing tool calling,
+  (/models, /chat/completions, /responses), when testing tool calling,
   error handling, or streaming against a deterministic server, or when
   configuring mock behaviors via config.yaml and Docker environment variables.
 license: MIT
@@ -74,7 +74,7 @@ Point any OpenAI SDK client at the mock server. The default API key is `your-sec
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8000/v1",
+    base_url="http://localhost:8000",
     api_key="your-secret-api-key",
 )
 ```
@@ -118,13 +118,13 @@ If `api-key` is set in config, clients must send `Authorization: Bearer <key>`. 
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/v1/models` | GET | List configured models |
-| `/v1/models/{model_id}` | GET | Retrieve a single model |
-| `/v1/chat/completions` | POST | Chat Completions API (streaming supported) |
-| `/v1/responses` | POST | Responses API (streaming supported) |
+| `/models` | GET | List configured models |
+| `/models/{model_id}` | GET | Retrieve a single model |
+| `/chat/completions` | POST | Chat Completions API (streaming supported) |
+| `/responses` | POST | Responses API (streaming supported) |
 | `/health` | GET | Health check (no auth required) |
 
-Both `/v1/chat/completions` and `/v1/responses` support `stream=True` (SSE, word-level chunking) and `stream_options.include_usage` for usage stats.
+Both `/chat/completions` and `/responses` support `stream=True` (SSE, word-level chunking) and `stream_options.include_usage` for usage stats.
 
 ## Configuration
 

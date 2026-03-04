@@ -4,7 +4,7 @@
 
 ## Overview
 
-Mock server implementing OpenAI's `/v1/models`, `/v1/chat/completions`, and `/v1/responses` endpoints. Default behavior: echo input as output (MirrorStrategy). Pluggable strategy system for custom behaviors.
+Mock server implementing OpenAI's `/models`, `/chat/completions`, and `/responses` endpoints. Default behavior: echo input as output (MirrorStrategy). Pluggable strategy system for custom behaviors.
 
 **Spec Reference**: Follow [OpenAI API Reference](https://platform.openai.com/docs/api-reference) exactly.
 **OpenAPI Spec**: https://app.stainless.com/api/spec/documented/openai/openapi.documented.yml
@@ -84,7 +84,7 @@ ResponseStrategy {
 - Default when `strategies` is missing: `["MirrorStrategy"]`.
 - Unknown strategy names are skipped with a warning.
 - Not registered in the factory — it **wraps** the factory internally.
-- Both routers (`/v1/chat/completions` and `/v1/responses`) instantiate the composition strategy directly.
+- Both routers (`/chat/completions` and `/responses`) instantiate the composition strategy directly.
 
 **Error Strategies** (config-driven):
 - `ChatErrorStrategy` / `ResponseErrorStrategy`: Read `error-messages` from config. If the last user message content matches a key in `error-messages`, return `StrategyResponse(type="error", ...)` with the configured status code, message, type, and code. Otherwise return empty list (no error).
@@ -147,16 +147,16 @@ The `error-messages` section maps message content strings to error responses. Wh
 
 All endpoints follow OpenAI spec exactly (same schemas, status codes, error formats).
 
-### GET /v1/models
+### GET /models
 Returns configured model list. [OpenAI Spec](https://platform.openai.com/docs/api-reference/models)
 
-### POST /v1/chat/completions
+### POST /chat/completions
 Chat-style completions with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/chat/create)
 - Supports `tools` for tool calling
 - Supports `stream_options.include_usage` for usage stats in streaming
 - Message content matching `error-messages` config returns HTTP errors (see Error Messages below)
 
-### POST /v1/responses
+### POST /responses
 OpenAI's newer Responses API with streaming support. [OpenAI Spec](https://platform.openai.com/docs/api-reference/responses)
 - Supports `tools` for tool calling (Responses API format: flat `{"type": "function", "name": ...}` tools)
 - Message content matching `error-messages` config returns HTTP errors (see Error Messages below)
@@ -177,7 +177,7 @@ Custom error triggers can be added by adding entries to the `error-messages` sec
 
 Only the last user message is checked. System/assistant/tool messages are ignored.
 Model validation happens first, so the model must be valid.
-Works on both `/v1/chat/completions` and `/v1/responses`.
+Works on both `/chat/completions` and `/responses`.
 
 ## Streaming (SSE)
 
@@ -242,7 +242,7 @@ Keem mock easy and stateless.
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8080/v1",
+    base_url="http://localhost:8080",
     api_key="sk-mock-key"
 )
 

@@ -1,4 +1,4 @@
-"""Tests for tool calling support in /v1/chat/completions."""
+"""Tests for tool calling support in /chat/completions."""
 
 import json
 from collections.abc import AsyncGenerator
@@ -80,7 +80,7 @@ async def openai_client(test_config: Config) -> AsyncGenerator[AsyncOpenAI, None
         client = AsyncOpenAI(
             api_key=TEST_API_KEY,
             http_client=http_client,
-            base_url="http://testserver/v1",
+            base_url="http://testserver",
         )
         yield client
 
@@ -109,7 +109,7 @@ async def test_tool_call_streaming_first_request(raw_client: httpx.AsyncClient) 
     """Test streaming tool call response when tools are present and configured."""
     async with raw_client.stream(
         "POST",
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [
@@ -173,7 +173,7 @@ async def test_tool_call_streaming_has_unique_tool_call_id(
     for _ in range(3):
         async with raw_client.stream(
             "POST",
-            "/v1/chat/completions",
+            "/chat/completions",
             json={
                 "model": "gpt-4",
                 "messages": [{"role": "user", "content": "test"}],
@@ -198,7 +198,7 @@ async def test_tool_call_streaming_has_unique_tool_call_id(
 async def test_tool_call_non_streaming(raw_client: httpx.AsyncClient) -> None:
     """Test non-streaming tool call response uses config arguments."""
     response = await raw_client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [
@@ -256,7 +256,7 @@ async def test_tool_call_unconfigured_tool_returns_warning(
         },
     }
     response = await raw_client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello world"}],
@@ -279,7 +279,7 @@ async def test_tool_call_picks_configured_tool(raw_client: httpx.AsyncClient) ->
     """Test that only tools in config are called, not just first in list."""
     # Config has both calculate and search, so first matching is used
     response = await raw_client.post(
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "find something"}],
@@ -323,7 +323,7 @@ async def test_tool_call_without_config_returns_mirror() -> None:
         headers={"Authorization": f"Bearer {TEST_API_KEY}"},
     ) as client:
         response = await client.post(
-            "/v1/chat/completions",
+            "/chat/completions",
             json={
                 "model": "gpt-4",
                 "messages": [{"role": "user", "content": "Hello!"}],
@@ -360,7 +360,7 @@ async def test_normal_streaming_without_tools() -> None:
         openai_client = AsyncOpenAI(
             api_key=TEST_API_KEY,
             http_client=http_client,
-            base_url="http://testserver/v1",
+            base_url="http://testserver",
         )
         user_message = "Hello world!"
         stream = await openai_client.chat.completions.create(
@@ -392,7 +392,7 @@ async def test_streaming_with_include_usage(raw_client: httpx.AsyncClient) -> No
     """Test streaming includes usage chunk when stream_options.include_usage=true."""
     async with raw_client.stream(
         "POST",
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -416,7 +416,7 @@ async def test_streaming_without_include_usage(raw_client: httpx.AsyncClient) ->
     """Test streaming does not include usage chunk by default."""
     async with raw_client.stream(
         "POST",
-        "/v1/chat/completions",
+        "/chat/completions",
         json={
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
