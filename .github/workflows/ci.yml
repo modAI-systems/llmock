@@ -43,4 +43,11 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run tests
-        run: uv run pytest -v
+        run: uv run pytest -v --junitxml=junit.xml
+
+      - name: Generate CI badges
+        uses: gaelgirodon/ci-badges-action@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          gist-id: ${{ env.GIST_ID }}
+          token: ${{ secrets.GIST_TOKEN }}
