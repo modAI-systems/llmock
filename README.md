@@ -7,7 +7,7 @@ OpenAI-compatible mock server for testing LLM integrations.
 
 ## Features
 
-- OpenAI API compatibility with key endpoints (`/v1/models`, `/v1/chat/completions`, `/v1/responses`)
+- OpenAI API compatibility with key endpoints (`/models`, `/chat/completions`, `/responses`)
 - Configurable mock responses via strategies
 - Default mirror strategy (echoes input as output)
 - **Tool calling support** — config-driven tool call responses when `tools` are present in the request
@@ -25,7 +25,7 @@ docker container run -p 8000:8000 ghcr.io/modai-systems/llmock:latest
 Test with this sample request (yes, the default secret key is really `your-secret-api-key`):
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-secret-api-key" \
   -d '{
@@ -73,7 +73,7 @@ Point your OpenAI client to the mock server:
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8000/v1",
+    base_url="http://localhost:8000",
     api_key="mock-key"  # Any key works
 )
 
@@ -96,7 +96,7 @@ print(response.output[0].content[0].text)
 
 When `ToolCallStrategy` is included in the `strategies` list in `config.yaml` and matching `tool-calls` entries exist, llmock responds with tool calls using the configured arguments. If no tools match the config, the next strategy in the chain is tried.
 
-This works on both `/v1/chat/completions` and `/v1/responses` endpoints.
+This works on both `/chat/completions` and `/responses` endpoints.
 
 #### Configuration
 
@@ -120,7 +120,7 @@ When a request includes a tool named `calculate`, the mock responds with a tool 
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="mock-key")
+client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
 
 response = client.chat.completions.create(
     model="gpt-4o",
@@ -147,7 +147,7 @@ tool_call = response.choices[0].message.tool_calls[0]
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="mock-key")
+client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
 
 response = client.responses.create(
     model="gpt-4o",
@@ -193,7 +193,7 @@ error-messages:
 ```python
 from openai import OpenAI, APIStatusError
 
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="mock-key")
+client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
 
 try:
     client.chat.completions.create(
@@ -206,7 +206,7 @@ except APIStatusError as e:
 ```
 
 Only the last user message is checked. System/assistant/tool messages are ignored.
-Works on both `/v1/chat/completions` and `/v1/responses` endpoints.
+Works on both `/chat/completions` and `/responses` endpoints.
 
 ## Configuration
 

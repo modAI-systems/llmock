@@ -1,4 +1,4 @@
-"""Tests for the /v1/responses endpoint."""
+"""Tests for the /responses endpoint."""
 
 from collections.abc import AsyncGenerator
 
@@ -42,7 +42,7 @@ async def test_responses_simple_string_input(client: httpx.AsyncClient) -> None:
     """Test response creation with simple string input."""
     input_text = "Tell me a story about a unicorn."
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": input_text,
@@ -88,7 +88,7 @@ async def test_responses_message_list_input(client: httpx.AsyncClient) -> None:
     """Test response creation with message list input."""
     user_message = "What is the capital of France?"
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": [
@@ -114,7 +114,7 @@ async def test_responses_with_instructions(client: httpx.AsyncClient) -> None:
     input_text = "Hello!"
     instructions = "You are a helpful assistant."
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": input_text,
@@ -134,7 +134,7 @@ async def test_responses_with_metadata(client: httpx.AsyncClient) -> None:
     input_text = "Test input"
     metadata = {"user_id": "123", "session": "abc"}
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": input_text,
@@ -152,7 +152,7 @@ async def test_responses_with_metadata(client: httpx.AsyncClient) -> None:
 async def test_responses_invalid_model(client: httpx.AsyncClient) -> None:
     """Test response creation with non-existent model returns 404."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "non-existent-model",
             "input": "Hello",
@@ -170,7 +170,7 @@ async def test_responses_streaming(client: httpx.AsyncClient) -> None:
     input_text = "Hello world!"
     async with client.stream(
         "POST",
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": input_text,
@@ -205,7 +205,7 @@ async def test_responses_streaming_content(client: httpx.AsyncClient) -> None:
     input_text = "Hello world!"
     async with client.stream(
         "POST",
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": input_text,
@@ -237,7 +237,7 @@ async def test_responses_streaming_content(client: httpx.AsyncClient) -> None:
 async def test_responses_multi_turn_conversation(client: httpx.AsyncClient) -> None:
     """Test response with multi-turn conversation input."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": [
@@ -259,7 +259,7 @@ async def test_responses_multi_turn_conversation(client: httpx.AsyncClient) -> N
 async def test_responses_optional_parameters(client: httpx.AsyncClient) -> None:
     """Test response creation with optional parameters."""
     response = await client.post(
-        "/v1/responses",
+        "/responses",
         json={
             "model": "gpt-4o",
             "input": "Test",

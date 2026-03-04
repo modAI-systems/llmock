@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from llmock.config import Config, get_config
 from llmock.schemas.models import Model, ModelList
 
-router = APIRouter(prefix="/v1", tags=["models"])
+router = APIRouter(prefix="", tags=["models"])
 
 
 def get_models_config(config: Config) -> list[dict[str, Any]]:

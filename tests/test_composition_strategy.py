@@ -1,7 +1,5 @@
 """Tests for the CompositionStrategy (priority-chain of strategies)."""
 
-from llmock.app import create_app
-from llmock.config import get_config
 from llmock.schemas.chat import ChatCompletionRequest, ChatMessageRequest
 from llmock.strategies import StrategyResponseType
 from llmock.strategies.strategy_composition import (

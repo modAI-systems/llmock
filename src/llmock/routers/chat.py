@@ -23,7 +23,7 @@ from llmock.schemas.chat import ChatCompletionRequest
 from llmock.strategies import StrategyResponse, StrategyResponseType
 from llmock.strategies.strategy_composition import ChatCompositionStrategy
 
-router = APIRouter(prefix="/v1", tags=["chat"])
+router = APIRouter(prefix="", tags=["chat"])
 
 
 @router.post("/chat/completions", response_model=None)

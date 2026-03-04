@@ -53,7 +53,7 @@ async def test_request_without_api_key_returns_401(
     client_with_auth: AsyncClient,
 ) -> None:
     """Test that requests without API key are rejected."""
-    response = await client_with_auth.get("/v1/models")
+    response = await client_with_auth.get("/models")
     assert response.status_code == 401
     assert response.json()["error"]["type"] == "auth_error"
 
@@ -63,7 +63,7 @@ async def test_request_with_invalid_api_key_returns_401(
 ) -> None:
     """Test that requests with wrong API key are rejected."""
     response = await client_with_auth.get(
-        "/v1/models",
+        "/models",
         headers={"Authorization": "Bearer wrong-key"},
     )
     assert response.status_code == 401
@@ -74,7 +74,7 @@ async def test_request_with_valid_api_key_succeeds(
 ) -> None:
     """Test that requests with correct API key are allowed."""
     response = await client_with_auth.get(
-        "/v1/models",
+        "/models",
         headers={"Authorization": f"Bearer {TEST_API_KEY}"},
     )
     assert response.status_code == 200
@@ -90,7 +90,7 @@ async def test_no_auth_required_when_api_key_not_configured(
     client_no_auth: AsyncClient,
 ) -> None:
     """Test that requests succeed when no API key is configured."""
-    response = await client_no_auth.get("/v1/models")
+    response = await client_no_auth.get("/models")
     assert response.status_code == 200
 
 
@@ -99,7 +99,7 @@ async def test_malformed_auth_header_returns_401(
 ) -> None:
     """Test that malformed Authorization header is rejected."""
     response = await client_with_auth.get(
-        "/v1/models",
+        "/models",
         headers={"Authorization": "Basic sometoken"},
     )
     assert response.status_code == 401

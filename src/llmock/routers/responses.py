@@ -35,7 +35,7 @@ from llmock.strategies import (
 )
 from llmock.strategies.strategy_composition import ResponseCompositionStrategy
 
-router = APIRouter(prefix="/v1", tags=["responses"])
+router = APIRouter(prefix="", tags=["responses"])
 
 
 @router.post("/responses", response_model=None)
