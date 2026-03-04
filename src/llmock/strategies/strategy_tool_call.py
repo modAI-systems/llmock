@@ -1,101 +1,157 @@
-"""Tool call strategies - config-driven tool call response generation.
+"""Tool call strategies - trigger phrase–driven tool call response generation.
 
-These strategies use a configuration dict that maps tool names to their
-response arguments. When tools are present in the request, the strategy
-looks up each tool by name and generates a tool call response for matches.
-Tools not found in the config return a text message indicating no
-tool call responses are registered.
+These strategies parse the last user message line-by-line for lines that
+match the trigger pattern::
 
-Configuration format (in config.yaml):
+    call tool '<name>' with '<json>'
 
-    tool-calls:
-      calculate: '{"expression": "2+2"}'
-      search: '{"query": "default search"}'
+- ``<name>`` must match one of the tools declared in ``request.tools``.
+- ``<json>`` must be a valid JSON string (may be empty, treated as ``{}``).
 
-Each key is a tool/function name, and the value is the JSON arguments
-string that the mock server will return as the tool call arguments.
+Each matching line produces one :class:`~llmock.strategies.base.StrategyResponse`
+of type ``TOOL_CALL``.  If no lines match the pattern (or the named tool is
+not in the request), an empty list is returned and the next strategy in the
+composition chain runs.
+
+No configuration keys are required.  Adding ``ToolCallStrategy`` to the
+``strategies`` list in ``config.yaml`` is sufficient:
+
+    strategies:
+      - ErrorStrategy
+      - ToolCallStrategy
+      - MirrorStrategy
 """
 
+import json
+import logging
+import re
 from typing import Any
 
 from llmock.schemas.chat import ChatCompletionRequest
-from llmock.schemas.responses import (
-    ResponseCreateRequest,
-)
+from llmock.schemas.responses import ResponseCreateRequest
 from llmock.strategies.base import StrategyResponse, tool_response
+from llmock.utils.chat import (
+    extract_last_user_text_chat,
+    extract_last_user_text_response,
+)
+
+logger = logging.getLogger(__name__)
+
+# Matches:  call tool '<name>' with '<args>'
+_TRIGGER_RE = re.compile(r"call tool '([^']+)' with '([^']*)'")
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def _tool_names_from_chat(request: ChatCompletionRequest) -> set[str]:
+    """Return the set of tool function names declared in a Chat request."""
+    if not request.tools:
+        return set()
+    names: set[str] = set()
+    for tool in request.tools:
+        name = tool.get("function", {}).get("name")
+        if name:
+            names.add(name)
+    return names
+
+
+def _tool_names_from_response(request: ResponseCreateRequest) -> set[str]:
+    """Return the set of tool names declared in a Responses request."""
+    if not request.tools:
+        return set()
+    names: set[str] = set()
+    for tool in request.tools:
+        name = tool.get("name")
+        if name:
+            names.add(name)
+    return names
+
+
+def _parse_triggers(text: str, available_tools: set[str]) -> list[StrategyResponse]:
+    """Scan *text* line-by-line and return tool responses for every match.
+
+    Each line is tested against ``_TRIGGER_RE``.  A match is accepted when:
+
+    1. The extracted tool ``<name>`` appears in ``available_tools``.
+    2. The extracted ``<json>`` (or ``{}`` when empty) is valid JSON.
+
+    Lines that do not match or fail either check are silently skipped.
+    """
+    responses: list[StrategyResponse] = []
+    for line in text.splitlines():
+        m = _TRIGGER_RE.search(line)
+        if not m:
+            continue
+        name, args_str = m.group(1), m.group(2)
+        if name not in available_tools:
+            logger.debug("Trigger tool '%s' not in request.tools — skipped", name)
+            continue
+        effective_args = args_str if args_str else "{}"
+        try:
+            json.loads(effective_args)
+        except json.JSONDecodeError:
+            logger.warning(
+                "Invalid JSON in trigger for tool '%s' — skipped: %r", name, args_str
+            )
+            continue
+        responses.append(tool_response(effective_args, name))
+    return responses
+
+
+# ---------------------------------------------------------------------------
+# Public strategy classes
+# ---------------------------------------------------------------------------
 
 
 class ChatToolCallStrategy:
-    """Config-driven tool call strategy for Chat Completions API.
+    """Trigger phrase–driven tool call strategy for Chat Completions API.
 
-    When tools are present in the request, iterates through each tool and
-    looks up the function name in the configured ``tool_calls`` dict.
-    If found, a ``tool_call`` response is generated with the configured
-    arguments. If not found, that tool is skipped.
+    Parses the last user message for ``call tool '<name>' with '<json>'``
+    lines.  Each matching line whose tool name appears in ``request.tools``
+    generates a ``TOOL_CALL`` strategy response.
 
-    Reads ``tool-calls`` from config.
+    No configuration is consumed.
     """
 
     def __init__(self, config: dict[str, Any]) -> None:
-        self.tool_calls: dict[str, str] = config.get("tool-calls", {})
+        pass  # no config required
 
     def generate_response(
         self, request: ChatCompletionRequest
     ) -> list[StrategyResponse]:
-        """Generate tool_call response items based on tools and config."""
-        return self._generate_tool_calls(request)
-
-    def _generate_tool_calls(
-        self, request: ChatCompletionRequest
-    ) -> list[StrategyResponse]:
-        """Generate tool_call responses for tools found in config."""
-        if not request.tools:
+        """Return tool call responses extracted from the last user message."""
+        available = _tool_names_from_chat(request)
+        if not available:
             return []
-
-        responses = []
-        for tool in request.tools:
-            func_name = tool.get("function", {}).get("name")
-            if func_name and func_name in self.tool_calls:
-                responses.append(tool_response(self.tool_calls[func_name], func_name))
-
-        if not responses:
+        text = extract_last_user_text_chat(request)
+        if text is None:
             return []
-
-        return responses
+        return _parse_triggers(text, available)
 
 
 class ResponseToolCallStrategy:
-    """Config-driven tool call strategy for the Responses API.
+    """Trigger phrase–driven tool call strategy for the Responses API.
 
-    Same behavior as ChatToolCallStrategy but operates on Responses API
-    request types (``ResponseCreateRequest``).
+    Same behaviour as :class:`ChatToolCallStrategy` but operates on
+    :class:`~llmock.schemas.responses.ResponseCreateRequest` objects.
 
-    Reads ``tool-calls`` from config.
+    No configuration is consumed.
     """
 
     def __init__(self, config: dict[str, Any]) -> None:
-        self.tool_calls: dict[str, str] = config.get("tool-calls", {})
+        pass  # no config required
 
     def generate_response(
         self, request: ResponseCreateRequest
     ) -> list[StrategyResponse]:
-        """Generate tool_call response items based on tools and config."""
-        return self._generate_tool_calls(request)
-
-    def _generate_tool_calls(
-        self, request: ResponseCreateRequest
-    ) -> list[StrategyResponse]:
-        """Generate tool_call responses for tools found in config."""
-        if not request.tools:
+        """Return tool call responses extracted from the last user input."""
+        available = _tool_names_from_response(request)
+        if not available:
             return []
-
-        responses = []
-        for tool in request.tools:
-            func_name = tool.get("name")
-            if func_name and func_name in self.tool_calls:
-                responses.append(tool_response(self.tool_calls[func_name], func_name))
-
-        if not responses:
+        text = extract_last_user_text_response(request)
+        if text is None:
             return []
-
-        return responses
+        return _parse_triggers(text, available)

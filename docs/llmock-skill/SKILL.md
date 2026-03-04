@@ -101,7 +101,7 @@ strategies:
 | Strategy | Config Section Required | Behavior |
 |----------|----------------------|----------|
 | `MirrorStrategy` | None | Echoes the last user message |
-| `ToolCallStrategy` | `tool-calls` | Returns tool calls with configured arguments |
+| `ToolCallStrategy` | None | Returns tool calls parsed from the trigger phrase in the last user message |
 | `ErrorStrategy` | `error-messages` | Returns HTTP errors when message content matches a trigger |
 
 If `strategies` is omitted, defaults to `["MirrorStrategy"]`. Unknown names are skipped with a warning.
@@ -176,15 +176,20 @@ error-messages:
     message: "Internal server error"
     type: "server_error"
     code: "internal_error"
-
-tool-calls:
-  calculate: '{"expression": "2+2"}'
-  get_weather: '{"location": "San Francisco", "unit": "celsius"}'
 ```
 
 ### Tool Calling
 
-When `ToolCallStrategy` is in the strategies list and a request includes a tool whose name matches a key in `tool-calls`, llmock responds with a tool call using the configured arguments. Tools not listed in config are ignored. If no tools match, the next strategy in the chain runs.
+When `ToolCallStrategy` is in the strategies list, llmock scans the last user message line-by-line for the pattern:
+
+```
+call tool '<name>' with '<json>'
+```
+
+- `<name>` must match one of the tools declared in the request's `tools` list.
+- `<json>` is the arguments string passed back as the tool call arguments (use `'{}'` for no arguments).
+- Multiple matching lines each produce a separate tool call response.
+- If no line matches, or the named tool is not in `request.tools`, the strategy returns an empty list and the next strategy runs.
 
 ### Error Simulation
 

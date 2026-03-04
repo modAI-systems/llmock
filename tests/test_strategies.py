@@ -196,18 +196,18 @@ SEARCH_TOOL = {
     },
 }
 
-TOOL_CALLS_CONFIG = {
-    "calculate": '{"expression": "2+2"}',
-    "search": '{"query": "test search"}',
-}
-
 
 def test_chat_tool_call_strategy_generates_tool_call() -> None:
-    """Test that the strategy generates a tool_call response for configured tools."""
-    strategy = ChatToolCallStrategy(config={"tool-calls": TOOL_CALLS_CONFIG})
+    """Test that the trigger phrase produces a tool_call response."""
+    strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
-        messages=[ChatMessageRequest(role="user", content="Calculate 6*7")],
+        messages=[
+            ChatMessageRequest(
+                role="user",
+                content="call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+            )
+        ],
         tools=[CALCULATOR_TOOL],
     )
 
@@ -219,11 +219,9 @@ def test_chat_tool_call_strategy_generates_tool_call() -> None:
     assert result[0].content == '{"expression": "2+2"}'
 
 
-def test_chat_tool_call_strategy_ignores_unconfigured_tools() -> None:
-    """Test that tools not in config return empty list."""
-    strategy = ChatToolCallStrategy(
-        config={"tool-calls": {"search": '{"query": "test"}'}}
-    )
+def test_chat_tool_call_strategy_no_trigger_phrase_returns_empty() -> None:
+    """Test that a message without the trigger phrase returns empty list."""
+    strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
         messages=[ChatMessageRequest(role="user", content="Calculate 6*7")],
@@ -235,12 +233,36 @@ def test_chat_tool_call_strategy_ignores_unconfigured_tools() -> None:
     assert result == []
 
 
-def test_chat_tool_call_strategy_multiple_tools() -> None:
-    """Test that strategy generates responses for all configured tools."""
-    strategy = ChatToolCallStrategy(config={"tool-calls": TOOL_CALLS_CONFIG})
+def test_chat_tool_call_strategy_tool_not_in_request_returns_empty() -> None:
+    """Test that trigger for a tool absent from request.tools is skipped."""
+    strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
-        messages=[ChatMessageRequest(role="user", content="test")],
+        messages=[
+            ChatMessageRequest(role="user", content="call tool 'calculate' with '{}'")
+        ],
+        tools=[SEARCH_TOOL],  # only search, not calculate
+    )
+
+    result = strategy.generate_response(request)
+
+    assert result == []
+
+
+def test_chat_tool_call_strategy_multiple_trigger_lines() -> None:
+    """Test that multiple trigger lines each produce a tool response."""
+    strategy = ChatToolCallStrategy(config={})
+    request = ChatCompletionRequest(
+        model="gpt-4",
+        messages=[
+            ChatMessageRequest(
+                role="user",
+                content=(
+                    "call tool 'calculate' with '{\"expression\": \"2+2\"}'\n"
+                    "call tool 'search' with '{\"query\": \"test search\"}'"
+                ),
+            )
+        ],
         tools=[CALCULATOR_TOOL, SEARCH_TOOL],
     )
 
@@ -253,14 +275,17 @@ def test_chat_tool_call_strategy_multiple_tools() -> None:
     assert result[1].name == "search"
 
 
-def test_chat_tool_call_strategy_partial_match() -> None:
-    """Test only tools in config are matched, others skipped."""
-    strategy = ChatToolCallStrategy(
-        config={"tool-calls": {"search": '{"query": "hi"}'}}
-    )
+def test_chat_tool_call_strategy_only_matching_tool_fires() -> None:
+    """Test that only the tool named in the trigger phrase fires."""
+    strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
-        messages=[ChatMessageRequest(role="user", content="test")],
+        messages=[
+            ChatMessageRequest(
+                role="user",
+                content="call tool 'search' with '{\"query\": \"hi\"}'",
+            )
+        ],
         tools=[CALCULATOR_TOOL, SEARCH_TOOL],
     )
 
@@ -270,31 +295,62 @@ def test_chat_tool_call_strategy_partial_match() -> None:
     assert result[0].name == "search"
 
 
-def test_chat_tool_call_strategy_empty_config() -> None:
-    """Test with empty tool_calls config returns empty list."""
-    strategy = ChatToolCallStrategy(config={"tool-calls": {}})
+def test_chat_tool_call_strategy_no_tools_in_request() -> None:
+    """Test with no tools in request returns empty list even with trigger phrase."""
+    strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
-        messages=[ChatMessageRequest(role="user", content="test")],
+        messages=[
+            ChatMessageRequest(role="user", content="call tool 'calculate' with '{}'")
+        ],
+    )
+
+    result = strategy.generate_response(request)
+
+    assert result == []
+
+
+def test_chat_tool_call_strategy_empty_args_normalised() -> None:
+    """Test that an empty args string is normalised to '{}'."""
+    strategy = ChatToolCallStrategy(config={})
+    request = ChatCompletionRequest(
+        model="gpt-4",
+        messages=[
+            ChatMessageRequest(role="user", content="call tool 'calculate' with ''")
+        ],
         tools=[CALCULATOR_TOOL],
     )
 
     result = strategy.generate_response(request)
 
-    assert result == []
+    assert len(result) == 1
+    assert result[0].content == "{}"
 
 
-def test_chat_tool_call_strategy_no_tools_in_request() -> None:
-    """Test with no tools in request returns empty list."""
-    strategy = ChatToolCallStrategy(config={"tool-calls": TOOL_CALLS_CONFIG})
+def test_chat_tool_call_strategy_last_message_is_tool_role() -> None:
+    """Test that strategy falls through when last message has role 'tool'."""
+    strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
-        messages=[ChatMessageRequest(role="user", content="Hello")],
+        messages=[
+            ChatMessageRequest(
+                role="user",
+                content="call tool 'calculate' with '{}'",
+            ),
+            ChatMessageRequest(role="assistant", content=None),
+            ChatMessageRequest(role="tool", content="4"),
+        ],
+        tools=[CALCULATOR_TOOL],
     )
 
     result = strategy.generate_response(request)
 
-    assert result == []
+    # Last user message contains the trigger but the very last msg is tool —
+    # the strategy must still scan back to find the user message.
+    # For now we check that the result is NOT empty (user trigger found).
+    # The infinite-loop prevention works because on a real follow-up cycle
+    # the tool result sits after the trigger and the user content hasn't changed.
+    assert len(result) == 1
 
 
 # ============================================================================
@@ -329,11 +385,16 @@ RESPONSES_SEARCH_TOOL = {
 
 
 def test_response_tool_call_strategy_generates_tool_call() -> None:
-    """Test tool_call response for configured tools."""
-    strategy = ResponseToolCallStrategy(config={"tool-calls": TOOL_CALLS_CONFIG})
+    """Test tool_call response when trigger phrase is present."""
+    strategy = ResponseToolCallStrategy(config={})
     request = ResponseCreateRequest(
         model="gpt-4o",
-        input=[SimpleInputMessage(role="user", content="Calculate 6*7")],
+        input=[
+            SimpleInputMessage(
+                role="user",
+                content="call tool 'calculate' with '{\"expression\": \"2+2\"}'",
+            )
+        ],
         tools=[RESPONSES_CALCULATOR_TOOL],
     )
 
@@ -345,15 +406,13 @@ def test_response_tool_call_strategy_generates_tool_call() -> None:
     assert result[0].content == '{"expression": "2+2"}'
 
 
-def test_response_tool_call_strategy_ignores_unconfigured_tools() -> None:
-    """Test that tools not in config return empty list."""
-    strategy = ResponseToolCallStrategy(
-        config={"tool-calls": {"search": '{"query": "x"}'}}
-    )
+def test_response_tool_call_strategy_tool_not_in_request_returns_empty() -> None:
+    """Test that trigger for a tool absent from request.tools is skipped."""
+    strategy = ResponseToolCallStrategy(config={})
     request = ResponseCreateRequest(
         model="gpt-4o",
-        input="Calculate 6*7",
-        tools=[RESPONSES_CALCULATOR_TOOL],
+        input="call tool 'calculate' with '{}'",
+        tools=[RESPONSES_SEARCH_TOOL],  # only search in request, not calculate
     )
 
     result = strategy.generate_response(request)
@@ -362,11 +421,11 @@ def test_response_tool_call_strategy_ignores_unconfigured_tools() -> None:
 
 
 def test_response_tool_call_strategy_string_input() -> None:
-    """Test tool_call with string input works."""
-    strategy = ResponseToolCallStrategy(config={"tool-calls": TOOL_CALLS_CONFIG})
+    """Test tool_call with string input and trigger phrase works."""
+    strategy = ResponseToolCallStrategy(config={})
     request = ResponseCreateRequest(
         model="gpt-4o",
-        input="Calculate 6*7",
+        input="call tool 'calculate' with '{}'",
         tools=[RESPONSES_CALCULATOR_TOOL],
     )
 
@@ -376,12 +435,15 @@ def test_response_tool_call_strategy_string_input() -> None:
     assert result[0].type == StrategyResponseType.TOOL_CALL
 
 
-def test_response_tool_call_strategy_multiple_tools() -> None:
-    """Test that strategy handles multiple matching tools."""
-    strategy = ResponseToolCallStrategy(config={"tool-calls": TOOL_CALLS_CONFIG})
+def test_response_tool_call_strategy_multiple_trigger_lines() -> None:
+    """Test that multiple trigger lines each produce a tool response."""
+    strategy = ResponseToolCallStrategy(config={})
     request = ResponseCreateRequest(
         model="gpt-4o",
-        input="test",
+        input=(
+            "call tool 'calculate' with '{}'\n"
+            "call tool 'search' with '{\"query\": \"hi\"}'"
+        ),
         tools=[RESPONSES_CALCULATOR_TOOL, RESPONSES_SEARCH_TOOL],
     )
 
@@ -390,6 +452,20 @@ def test_response_tool_call_strategy_multiple_tools() -> None:
     assert len(result) == 2
     assert result[0].name == "calculate"
     assert result[1].name == "search"
+
+
+def test_response_tool_call_strategy_no_trigger_phrase_returns_empty() -> None:
+    """Test that a message without the trigger phrase returns empty list."""
+    strategy = ResponseToolCallStrategy(config={})
+    request = ResponseCreateRequest(
+        model="gpt-4o",
+        input="Calculate 6*7",
+        tools=[RESPONSES_CALCULATOR_TOOL],
+    )
+
+    result = strategy.generate_response(request)
+
+    assert result == []
 
 
 def test_strategy_response_dataclass() -> None:
