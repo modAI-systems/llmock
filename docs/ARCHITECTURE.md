@@ -67,7 +67,7 @@ ResponseStrategy {
 - `ResponseMirrorStrategy`: Extract last user input → return `[StrategyResponse(type="text", content=...)]`
 
 **Tool Call Strategies** (trigger phrase–driven):
-- `ChatToolCallStrategy` (Chat Completions): Parses the **last user message** line-by-line for the pattern `call tool '<name>' with '<json>'`. Each matching line whose `<name>` appears in `request.tools` produces a `StrategyResponse(type="tool_call")` with the extracted JSON arguments. Multiple matching lines produce multiple responses. If no line matches, returns an empty list (falls through to the next strategy). No config keys required.
+- `ChatToolCallStrategy` (Chat Completions): Parses the **last user message** line-by-line for the pattern `call tool '<name>' with '<json>'`. Every matching line produces a `StrategyResponse(type="tool_call")` with the extracted name and JSON arguments — no validation against `request.tools` is performed. Multiple matching lines produce multiple responses. If no line matches, returns an empty list (falls through to the next strategy). No config keys required.
 - `ResponseToolCallStrategy` (Responses API): Same trigger-phrase logic but operates on `ResponseCreateRequest` inputs (string or structured message list).
 - Both support streaming and non-streaming modes.
 
@@ -116,7 +116,7 @@ models:
 
 The `strategies` field is an ordered list of strategy names to try. The composition strategy runs them in order; the first one that returns a non-empty result wins. If omitted, `["MirrorStrategy"]` is the default.
 
-`ToolCallStrategy` fires when the last user message contains a line matching `call tool '<name>' with '<json>'` and `<name>` is present in `request.tools`.
+`ToolCallStrategy` fires when the last user message contains a line matching `call tool '<name>' with '<json>'`. The `<name>` is used verbatim — no check against `request.tools` is performed.
 
 `ErrorStrategy` fires when the last user message contains a line matching `raise error <json>`, where `<json>` has at least `code` (int) and `message` (str).
 
