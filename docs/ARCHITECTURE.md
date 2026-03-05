@@ -80,7 +80,7 @@ ResponseStrategy {
 **Composition Strategy** (used by routers):
 - `ChatCompositionStrategy` / `ResponseCompositionStrategy` — reads the `strategies` list from config, creates each sub-strategy via the factory registry, and runs them in order.
 - The first strategy that returns a **non-empty** `list[StrategyResponse]` wins; remaining strategies are not called.
-- Default when `strategies` is missing: `["MirrorStrategy"]`.
+- Default when `strategies` is missing: `["ErrorStrategy", "ToolCallStrategy", "MirrorStrategy"]`.
 - Unknown strategy names are skipped with a warning.
 - Not registered in the factory — it **wraps** the factory internally.
 - Both routers (`/chat/completions` and `/responses`) instantiate the composition strategy directly.
