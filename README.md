@@ -11,8 +11,8 @@ OpenAI-compatible mock server for testing LLM integrations.
 - OpenAI API compatibility with key endpoints (`/models`, `/chat/completions`, `/responses`)
 - Configurable mock responses via strategies
 - Default mirror strategy (echoes input as output)
-- **Tool calling support** — config-driven tool call responses when `tools` are present in the request
-- **Error message simulation** — config-driven error responses triggered by specific message content
+- **Tool calling support** — trigger phrase–driven tool call responses when `tools` are present in the request using `call tool '<name>' with '<json>'`
+- **Error simulation** — trigger phrase–driven error responses using `raise error <json>` in the last user message
 - Streaming support for both Chat Completions and Responses APIs (including `stream_options.include_usage`)
 
 ## Quick Start
@@ -171,27 +171,31 @@ function_call = response.output[0]
 # function_call.arguments == '{"expression": "6*7"}'  (from trigger phrase)
 ```
 
-### Error Message Simulation
+### Error Simulation
 
-Error responses are configured in `config.yaml` under the `error-messages` section. When a request's last user message matches a key in that section exactly, the server returns the configured error response instead of a normal completion.
+When `ErrorStrategy` is included in the `strategies` list, llmock watches the last user message for lines matching the pattern:
 
-Default configuration:
+```
+raise error <json>
+```
 
-| Message Content   | HTTP Status | Error Type              | Message                |
-|------------------|-------------|-------------------------|------------------------|
-| `trigger-401`    | 401         | `authentication_error`  | Invalid API key        |
-| `trigger-429`    | 429         | `rate_limit_error`      | Rate limit exceeded    |
-| `trigger-500`    | 500         | `server_error`          | Internal server error  |
+The JSON payload must contain:
+- `code` (integer) — HTTP status code to return
+- `message` (string) — error message
+- `type` (string, optional) — OpenAI error type (e.g. `"rate_limit_error"`)
+- `error_code` (string, optional) — OpenAI error code (e.g. `"rate_limit_exceeded"`)
 
-You can add custom error triggers by extending the `error-messages` section:
+The first matching line wins. If no line matches, the strategy falls through to the next one.
+
+No extra config keys are needed — adding `ErrorStrategy` to the `strategies` list is sufficient.
+
+#### Configuration
 
 ```yaml
-error-messages:
-  "Hi":
-    status-code: 403
-    message: "Forbidden"
-    type: "forbidden_error"
-    code: "forbidden"
+strategies:
+  - ErrorStrategy
+  - ToolCallStrategy
+  - MirrorStrategy
 ```
 
 ```python
@@ -202,7 +206,7 @@ client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
 try:
     client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "user", "content": "trigger-429"}]
+        messages=[{"role": "user", "content": 'raise error {"code": 429, "message": "Rate limit exceeded", "type": "rate_limit_error", "error_code": "rate_limit_exceeded"}'}]
     )
 except APIStatusError as e:
     print(e.status_code)  # 429
@@ -214,7 +218,7 @@ Works on both `/chat/completions` and `/responses` endpoints.
 
 ## Configuration
 
-Edit `config.yaml` to configure available models, response strategies, error messages, and tool call responses:
+Edit `config.yaml` to configure available models and response strategies:
 
 ```yaml
 # Ordered list of strategies to try (first non-empty result wins)
@@ -231,24 +235,7 @@ models:
   - id: "gpt-4o-mini"
     created: 1721172741
     owned_by: "openai"
-
-# Config-driven error responses (triggered by message content)
-error-messages:
-  "trigger-401":
-    status-code: 401
-    message: "Invalid API key"
-    type: "authentication_error"
-    code: "invalid_api_key"
-  "trigger-429":
-    status-code: 429
-    message: "Rate limit exceeded"
-    type: "rate_limit_error"
-    code: "rate_limit_exceeded"
-  "trigger-500":
-    status-code: 500
-    message: "Internal server error"
-    type: "server_error"
-    code: "internal_error"
+```
 
 ### Environment Variable Overrides
 
@@ -268,7 +255,6 @@ export LLMOCK_CORS_ALLOW_ORIGINS="http://localhost:8000;http://localhost:5173"
 Notes:
 - Lists are parsed from semicolon-separated values.
 - Only keys that exist in `config.yaml` are overridden.
-```
 
 ## Development
 
