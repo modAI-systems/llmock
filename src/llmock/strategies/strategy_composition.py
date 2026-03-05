@@ -5,7 +5,8 @@ the factory registry.  When ``generate_response`` is called, the strategies
 are tried in order; the first one that returns a **non-empty** list wins and
 its result is returned immediately.  Remaining strategies are not called.
 
-If ``strategies`` is missing from config, defaults to ``["MirrorStrategy"]``.
+If ``strategies`` is missing from config, defaults to
+``["ErrorStrategy", "ToolCallStrategy", "MirrorStrategy"]``.
 
 This strategy is **not** registered in the factory — it wraps the factory
 internally and is the top-level strategy instantiated by the routers.
@@ -21,7 +22,7 @@ from llmock.strategies.factory import _STRATEGIES
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_STRATEGIES = ["MirrorStrategy"]
+_DEFAULT_STRATEGIES = ["ErrorStrategy", "ToolCallStrategy", "MirrorStrategy"]
 
 
 class ChatCompositionStrategy:
