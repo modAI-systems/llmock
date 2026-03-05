@@ -174,10 +174,10 @@ When `ToolCallStrategy` is in the strategies list, llmock scans the last user me
 call tool '<name>' with '<json>'
 ```
 
-- `<name>` must match one of the tools declared in the request's `tools` list.
+- `<name>` is used verbatim — no check against the request's `tools` list is performed.
 - `<json>` is the arguments string passed back as the tool call arguments (use `'{}'` for no arguments).
 - Multiple matching lines each produce a separate tool call response.
-- If no line matches, or the named tool is not in `request.tools`, the strategy returns an empty list and the next strategy runs.
+- If no line matches, the strategy returns an empty list and the next strategy runs.
 
 ### Error Simulation
 

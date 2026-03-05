@@ -233,8 +233,8 @@ def test_chat_tool_call_strategy_no_trigger_phrase_returns_empty() -> None:
     assert result == []
 
 
-def test_chat_tool_call_strategy_tool_not_in_request_returns_empty() -> None:
-    """Test that trigger for a tool absent from request.tools is skipped."""
+def test_chat_tool_call_strategy_tool_not_in_request_still_triggers() -> None:
+    """Test that trigger phrase creates a tool call even if the tool is not declared in request.tools."""
     strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
@@ -246,7 +246,8 @@ def test_chat_tool_call_strategy_tool_not_in_request_returns_empty() -> None:
 
     result = strategy.generate_response(request)
 
-    assert result == []
+    assert len(result) == 1
+    assert result[0].name == "calculate"
 
 
 def test_chat_tool_call_strategy_multiple_trigger_lines() -> None:
@@ -296,7 +297,7 @@ def test_chat_tool_call_strategy_only_matching_tool_fires() -> None:
 
 
 def test_chat_tool_call_strategy_no_tools_in_request() -> None:
-    """Test with no tools in request returns empty list even with trigger phrase."""
+    """Test that trigger phrase creates a tool call even without tools in request."""
     strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
         model="gpt-4",
@@ -307,7 +308,8 @@ def test_chat_tool_call_strategy_no_tools_in_request() -> None:
 
     result = strategy.generate_response(request)
 
-    assert result == []
+    assert len(result) == 1
+    assert result[0].name == "calculate"
 
 
 def test_chat_tool_call_strategy_empty_args_normalised() -> None:
@@ -408,8 +410,8 @@ def test_response_tool_call_strategy_generates_tool_call() -> None:
     assert result[0].content == '{"expression": "2+2"}'
 
 
-def test_response_tool_call_strategy_tool_not_in_request_returns_empty() -> None:
-    """Test that trigger for a tool absent from request.tools is skipped."""
+def test_response_tool_call_strategy_tool_not_in_request_still_triggers() -> None:
+    """Test that trigger phrase creates a tool call even if the tool is not declared in request.tools."""
     strategy = ResponseToolCallStrategy(config={})
     request = ResponseCreateRequest(
         model="gpt-4o",
@@ -419,7 +421,8 @@ def test_response_tool_call_strategy_tool_not_in_request_returns_empty() -> None
 
     result = strategy.generate_response(request)
 
-    assert result == []
+    assert len(result) == 1
+    assert result[0].name == "calculate"
 
 
 def test_response_tool_call_strategy_string_input() -> None:
