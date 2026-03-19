@@ -72,6 +72,22 @@ This project is designed for AI-first development. All agents MUST follow these 
 - `src/llmock/`: Main application source code.
 - `tests/`: Test files.
 
+## Git Hooks (prek)
+
+Hooks check (but do not auto-fix) on every commit and fail if issues remain.
+
+**One-time setup** after cloning:
+```bash
+uv tool install prek   # Install prek binary (skip if already installed)
+prek install           # Wire hooks into .git/hooks/pre-commit
+```
+
+**Manual run:**
+```bash
+prek run               # Run on staged files only
+prek run --all-files   # Run on all files
+```
+
 ## COMMANDS
 
 ### uv (Package Manager / Build System)
