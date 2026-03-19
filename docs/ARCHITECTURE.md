@@ -96,13 +96,16 @@ ResponseStrategy {
 
 **config.yaml**:
 ```yaml
-api-key: "your-secret-api-key"
+# Port for the HTTP server (default: 8000). Override: LLMOCK_PORT=9000
+port: 8000
 
-# Ordered list of strategies (first non-empty result wins)
-strategies:
-  - ErrorStrategy
-  - ToolCallStrategy
-  - MirrorStrategy
+# API key (optional — if not set, no auth required). Override: LLMOCK_API_KEY=secret
+api-key:
+
+# CORS configuration
+cors:
+  allow-origins:
+    - "http://localhost:8000"
 
 models:
   - id: gpt-4o
@@ -112,7 +115,17 @@ models:
     created: 1721172741
     owned_by: openai
 
+# Ordered list of strategies (first non-empty result wins)
+strategies:
+  - ErrorStrategy
+  - ToolCallStrategy
+  - MirrorStrategy
 ```
+
+**Environment variable overrides**: Prefix `LLMOCK_`, nested keys separated by `_`, dashes → underscores.
+- Scalars: `LLMOCK_PORT=9000`, `LLMOCK_API_KEY=secret`
+- Lists (JSON arrays): `LLMOCK_CORS_ALLOW_ORIGINS='["http://a.com","http://b.com"]'`
+- Lists (JSON arrays): `LLMOCK_MODELS='[{"id":"my-model","created":1715367049,"owned_by":"custom"}]'`
 
 The `strategies` field is an ordered list of strategy names to try. The composition strategy runs them in order; the first one that returns a non-empty result wins. If omitted, `["MirrorStrategy"]` is the default.
 

@@ -74,11 +74,11 @@ def test_override_scalar_value(
     assert config["api-key"] == "env-override-key"
 
 
-def test_override_list_value_with_semicolon_separated(
+def test_override_list_value_with_json_array(
     temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test overriding a list value with semicolon-separated env var."""
-    origins = "http://localhost:3000;http://example.com;http://dev.local"
+    """Test overriding a list value with a JSON array env var."""
+    origins = '["http://localhost:3000","http://example.com","http://dev.local"]'
     monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", origins)
 
     config = load_config(temp_config_file)
@@ -94,7 +94,7 @@ def test_override_nested_key(
     temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test overriding a nested config key."""
-    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", "http://localhost:5173")
+    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", '["http://localhost:5173"]')
 
     config = load_config(temp_config_file)
 
@@ -131,7 +131,7 @@ def test_multiple_overrides(
 ) -> None:
     """Test multiple environment variable overrides at once."""
     monkeypatch.setenv(f"{ENV_PREFIX}API_KEY", "override-key")
-    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", "http://prod.example.com")
+    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", '["http://prod.example.com"]')
 
     config = load_config(temp_config_file)
 
@@ -154,32 +154,25 @@ def test_override_empty_string_value(
 def test_override_list_with_single_value(
     temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test overriding a list with a single value (no semicolon)."""
-    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", "http://localhost:3000")
+    """Test overriding a list with a single-element JSON array."""
+    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", '["http://localhost:3000"]')
 
     config = load_config(temp_config_file)
 
-    # Single value should still be in a list
     assert config["cors"]["allow-origins"] == ["http://localhost:3000"]
 
 
-def test_override_list_with_empty_values(
+def test_override_list_with_invalid_json_raises(
     temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test that empty segments in semicolon list are preserved."""
+    """Test that a non-JSON value for a list config raises ValueError."""
     monkeypatch.setenv(
         f"{ENV_PREFIX}CORS_ALLOW_ORIGINS",
-        "http://localhost:8000;;http://localhost:3000",
+        "http://localhost:8000",
     )
 
-    config = load_config(temp_config_file)
-
-    # Empty string in the middle should be preserved as part of split
-    assert config["cors"]["allow-origins"] == [
-        "http://localhost:8000",
-        "",
-        "http://localhost:3000",
-    ]
+    with pytest.raises(ValueError, match="must be a JSON array"):
+        load_config(temp_config_file)
 
 
 # Direct _apply_env_overrides function tests
@@ -268,7 +261,7 @@ def test_full_workflow_yaml_with_env_overrides(
         yaml.dump(config_data, f)
 
     monkeypatch.setenv(f"{ENV_PREFIX}API_KEY", "env-key")
-    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", "http://prod.com")
+    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", '["http://prod.com"]')
     monkeypatch.setenv(f"{ENV_PREFIX}MAX_CONNECTIONS", "50")
 
     config = load_config(config_file)
@@ -276,3 +269,94 @@ def test_full_workflow_yaml_with_env_overrides(
     assert config["api-key"] == "env-key"
     assert config["cors"]["allow-origins"] == ["http://prod.com"]
     assert config["max-connections"] == "50"
+
+
+def test_override_list_with_non_json_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that a plain string env var for a list field raises ValueError."""
+    config = {"cors": {"allow-origins": ["http://localhost:8000"]}}
+    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", "not-json")
+
+    with pytest.raises(ValueError, match="must be a JSON array"):
+        _apply_env_overrides(config)
+
+
+def test_override_list_with_json_array(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that a list config value can be overridden with a JSON array."""
+    config = {
+        "models": [
+            {"id": "gpt-4o", "created": 1715367049, "owned_by": "openai"},
+        ]
+    }
+    monkeypatch.setenv(
+        f"{ENV_PREFIX}MODELS",
+        '[{"id":"my-model","created":1000000000,"owned_by":"custom"}]',
+    )
+
+    _apply_env_overrides(config)
+
+    assert config["models"] == [
+        {"id": "my-model", "created": 1000000000, "owned_by": "custom"}
+    ]
+
+
+def test_override_list_with_non_array_json_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that a non-array JSON value for a list config raises ValueError."""
+    config = {"cors": {"allow-origins": ["http://localhost:8000"]}}
+    monkeypatch.setenv(f"{ENV_PREFIX}CORS_ALLOW_ORIGINS", '"http://localhost:3000"')
+
+    with pytest.raises(ValueError, match="must be a JSON array"):
+        _apply_env_overrides(config)
+
+
+def test_override_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that port can be overridden via env var."""
+    config = {"port": 8000}
+    monkeypatch.setenv(f"{ENV_PREFIX}PORT", "9000")
+
+    _apply_env_overrides(config)
+
+    assert config["port"] == "9000"
+
+
+def test_null_api_key_is_overridable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that a null api-key in config can be set via env var."""
+    config = {"api-key": None}
+    monkeypatch.setenv(f"{ENV_PREFIX}API_KEY", "my-secret")
+
+    _apply_env_overrides(config)
+
+    assert config["api-key"] == "my-secret"
+
+
+def test_models_override_via_json_env_var(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that models list can be fully replaced via a JSON array env var."""
+    config_data = {
+        "models": [
+            {"id": "gpt-4o", "created": 1715367049, "owned_by": "openai"},
+        ]
+    }
+    config_file = tmp_path / "config.yaml"
+    with open(config_file, "w") as f:
+        yaml.dump(config_data, f)
+
+    models_json = '[{"id": "my-model", "created": 1000000000, "owned_by": "custom"}, {"id": "other-model", "created": 1000000001, "owned_by": "custom"}]'
+    monkeypatch.setenv(f"{ENV_PREFIX}MODELS", models_json)
+
+    config = load_config(config_file)
+
+    assert config["models"] == [
+        {"id": "my-model", "created": 1000000000, "owned_by": "custom"},
+        {"id": "other-model", "created": 1000000001, "owned_by": "custom"},
+    ]

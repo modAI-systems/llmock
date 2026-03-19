@@ -50,14 +50,15 @@ Override individual config values using `LLMOCK_`-prefixed environment variables
 ```bash
 docker container run -p 8000:8000 \
   -e LLMOCK_API_KEY=my-custom-key \
-  -e LLMOCK_CORS_ALLOW_ORIGINS="http://localhost:3000;http://localhost:5173" \
+  -e 'LLMOCK_CORS_ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]' \
+  -e 'LLMOCK_MODELS=[{"id":"claude-3-5-sonnet","created":1715367049,"owned_by":"anthropic"},{"id":"gemini-2.0-flash","created":1715367049,"owned_by":"google"}]' \
   ghcr.io/modai-systems/llmock:latest
 ```
 
 Environment variable rules:
 - Nested keys joined with underscores: `cors.allow-origins` → `LLMOCK_CORS_ALLOW_ORIGINS`
 - Dashes converted to underscores: `api-key` → `LLMOCK_API_KEY`
-- Lists parsed from semicolon-separated values
+- Lists must be passed as JSON arrays: `'["a","b"]'`
 - Only keys present in `config.yaml` are overridden
 
 ### Verify It's Running
