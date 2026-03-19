@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Configuration for port (default 8000).
+- v1 endpoints for /v1/chat/completions, /v1/models and /v1/responses.
 
 ### Changed
 

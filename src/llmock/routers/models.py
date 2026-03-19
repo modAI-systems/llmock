@@ -16,6 +16,7 @@ def get_models_config(config: Config) -> list[dict[str, Any]]:
 
 
 @router.get("/models", response_model=ModelList)
+@router.get("/v1/models", response_model=ModelList)
 async def list_models(
     config: Annotated[Config, Depends(get_config)],
 ) -> ModelList:
@@ -38,6 +39,7 @@ async def list_models(
 
 
 @router.get("/models/{model_id}", response_model=Model)
+@router.get("/v1/models/{model_id}", response_model=Model)
 async def retrieve_model(
     model_id: str,
     config: Annotated[Config, Depends(get_config)],
