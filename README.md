@@ -9,7 +9,6 @@ OpenAI-compatible mock server for testing LLM integrations.
 ## Features
 
 - OpenAI API compatibility with key endpoints (`/models`, `/chat/completions`, `/responses`)
-- Configurable mock responses via strategies
 - Default mirror strategy (echoes input as output)
 - **Tool calling support** — trigger phrase–driven tool call responses when `tools` are present in the request using `call tool '<name>' with '<json>'`
 - **Error simulation** — trigger phrase–driven error responses using `raise error <json>` in the last user message
@@ -23,12 +22,11 @@ OpenAI-compatible mock server for testing LLM integrations.
 docker container run -p 8000:8000 ghcr.io/modai-systems/llmock:latest
 ```
 
-Test with this sample request (yes, the default secret key is really `your-secret-api-key`):
+Test with this sample request:
 
 ```bash
 curl http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your-secret-api-key" \
   -d '{
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Hello!"}]
@@ -47,15 +45,13 @@ What the request does is simply mirror the input, so it returns `Hello!`.
 **Installation:**
 
 ```bash
-git clone https://github.com/modAI-systems/llmock.git
-cd llmock
 uv sync --all-extras
 ```
 
 **Run the Server:**
 
 ```bash
-uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000
+uv run python -m llmock
 ```
 
 For development with auto-reload:
@@ -66,161 +62,23 @@ uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000 --reload
 
 The server will be available at `http://localhost:8000`. Health check available at `/health`.
 
-### Usage Example
-
-Point your OpenAI client to the mock server:
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://localhost:8000",
-    api_key="mock-key"  # Any key works
-)
-
-# Chat Completions API
-response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[{"role": "user", "content": "Hello!"}]
-)
-print(response.choices[0].message.content)
-
-# Responses API
-response = client.responses.create(
-    model="gpt-4o",
-    input="Hello!"
-)
-print(response.output[0].content[0].text)
-```
-
-### Tool Calling
-
-When `ToolCallStrategy` is included in the `strategies` list, llmock watches the last user message for lines matching the pattern:
-
-```
-call tool '<name>' with '<json>'
-```
-
-- `<name>` is used verbatim — no check against the `tools` list in the request is performed.
-- `<json>` is the arguments string passed to the tool (use `'{}'` for no arguments).
-- Multiple matching lines produce multiple tool calls.
-- If no line matches, the strategy falls through to the next one (e.g. `MirrorStrategy`).
-
-No extra config keys are needed — adding `ToolCallStrategy` to the `strategies` list is sufficient.
-
-This works on both `/chat/completions` and `/responses` endpoints.
-
-#### Configuration
-
-```yaml
-strategies:
-  - ErrorStrategy
-  - ToolCallStrategy
-  - MirrorStrategy
-```
-
-#### Chat Completions API
-
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
-
-response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[{"role": "user", "content": "call tool 'calculate' with '{\"expression\": \"6*7\"}'"}],
-    tools=[{
-        "type": "function",
-        "function": {
-            "name": "calculate",
-            "parameters": {
-                "type": "object",
-                "properties": {"expression": {"type": "string"}},
-                "required": ["expression"]
-            }
-        }
-    }]
-)
-tool_call = response.choices[0].message.tool_calls[0]
-# tool_call.function.name == "calculate"
-# tool_call.function.arguments == '{"expression": "6*7"}'  (from trigger phrase)
-```
-
-#### Responses API
-
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
-
-response = client.responses.create(
-    model="gpt-4o",
-    input="call tool 'calculate' with '{\"expression\": \"6*7\"}'",
-    tools=[{
-        "type": "function",
-        "name": "calculate",
-        "parameters": {
-            "type": "object",
-            "properties": {"expression": {"type": "string"}},
-            "required": ["expression"]
-        }
-    }]
-)
-function_call = response.output[0]
-# function_call.name == "calculate"
-# function_call.arguments == '{"expression": "6*7"}'  (from trigger phrase)
-```
-
-### Error Simulation
-
-When `ErrorStrategy` is included in the `strategies` list, llmock watches the last user message for lines matching the pattern:
-
-```
-raise error <json>
-```
-
-The JSON payload must contain:
-- `code` (integer) — HTTP status code to return
-- `message` (string) — error message
-- `type` (string, optional) — OpenAI error type (e.g. `"rate_limit_error"`)
-- `error_code` (string, optional) — OpenAI error code (e.g. `"rate_limit_exceeded"`)
-
-The first matching line wins. If no line matches, the strategy falls through to the next one.
-
-No extra config keys are needed — adding `ErrorStrategy` to the `strategies` list is sufficient.
-
-#### Configuration
-
-```yaml
-strategies:
-  - ErrorStrategy
-  - ToolCallStrategy
-  - MirrorStrategy
-```
-
-```python
-from openai import OpenAI, APIStatusError
-
-client = OpenAI(base_url="http://localhost:8000", api_key="mock-key")
-
-try:
-    client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": 'raise error {"code": 429, "message": "Rate limit exceeded", "type": "rate_limit_error", "error_code": "rate_limit_exceeded"}'}]
-    )
-except APIStatusError as e:
-    print(e.status_code)  # 429
-    print(e.body)         # {"error": {"message": "Rate limit exceeded", ...}}
-```
-
-Only the last user message is checked. System/assistant/tool messages are ignored.
-Works on both `/chat/completions` and `/responses` endpoints.
 
 ## Configuration
 
 Edit `config.yaml` to configure available models and response strategies:
 
 ```yaml
+# Port for the HTTP server (default: 8000)
+port: 8000
+
+# API key for authentication (optional - if not set, no auth required)
+api-key:
+
+# CORS configuration
+cors:
+  allow-origins:
+    - "http://localhost:8000"
+
 # Ordered list of strategies to try (first non-empty result wins)
 # Available: ErrorStrategy, ToolCallStrategy, MirrorStrategy
 strategies:
@@ -245,16 +103,101 @@ Nested keys are joined with underscores, and dashes are converted to underscores
 Examples:
 
 ```bash
-# Scalar override
+# Port
+export LLMOCK_PORT=9000
+
+# API key (enables authentication)
 export LLMOCK_API_KEY=your-secret-api-key
 
-# Nested override: cors.allow-origins
-export LLMOCK_CORS_ALLOW_ORIGINS="http://localhost:8000;http://localhost:5173"
+# Lists — always use a JSON array
+export LLMOCK_CORS_ALLOW_ORIGINS='["http://localhost:8000","http://localhost:5173"]'
+
+# Models — JSON array of model objects
+export LLMOCK_MODELS='[{"id":"my-model","created":1715367049,"owned_by":"custom"},{"id":"other-model","created":1715367049,"owned_by":"custom"}]'
+```
+
+Docker example using a custom port and API key:
+
+```bash
+docker container run -p 9000:9000 \
+  -e LLMOCK_PORT=9000 \
+  -e LLMOCK_API_KEY=secret \
+  ghcr.io/modai-systems/llmock:latest
 ```
 
 Notes:
-- Lists are parsed from semicolon-separated values.
+- Lists must be passed as JSON arrays (`[...]`).
 - Only keys that exist in `config.yaml` are overridden.
+
+
+## Operation
+
+### Tool Calling
+
+When `ToolCallStrategy` is included in the `strategies` list, llmock watches the last user message for lines matching the pattern:
+
+```
+call tool '<name>' with '<json>'
+```
+
+- `<name>` is used verbatim — no check against the `tools` list in the request is performed.
+- `<json>` is the arguments string passed to the tool (use `'{}'` for no arguments).
+- Multiple matching lines produce multiple tool calls.
+- If no line matches, the strategy falls through to the next one (e.g. `MirrorStrategy`).
+
+No extra config keys are needed — adding `ToolCallStrategy` to the `strategies` list is sufficient.
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "call tool 'calculate' with '{\"expression\": \"6*7\"}'"}],
+    tools=[{
+        "type": "function",
+        "function": {
+            "name": "calculate",
+            "parameters": {
+                "type": "object",
+                "properties": {"expression": {"type": "string"}},
+                "required": ["expression"]
+            }
+        }
+    }]
+)
+tool_call = response.choices[0].message.tool_calls[0]
+# tool_call.function.name == "calculate"
+# tool_call.function.arguments == '{"expression": "6*7"}'  (from trigger phrase)
+```
+
+
+This works on both `/chat/completions` and `/responses` endpoints.
+
+### Error Simulation
+
+When `ErrorStrategy` is included in the `strategies` list, llmock watches the last user message for lines matching the pattern:
+
+```
+raise error <json>
+```
+
+The JSON payload must contain:
+- `code` (integer) — HTTP status code to return
+- `message` (string) — error message
+- `type` (string, optional) — OpenAI error type (e.g. `"rate_limit_error"`)
+- `error_code` (string, optional) — OpenAI error code (e.g. `"rate_limit_exceeded"`)
+
+The first matching line wins. If no line matches, the strategy falls through to the next one.
+
+No extra config keys are needed — adding `ErrorStrategy` to the `strategies` list is sufficient.
+
+```python
+client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": 'raise error {"code": 429, "message": "Rate limit exceeded", "type": "rate_limit_error", "error_code": "rate_limit_exceeded"}'}]
+)
+```
+
+Only the last user message is checked. System/assistant/tool messages are ignored.
+Works on both `/chat/completions` and `/responses` endpoints.
 
 ## Development
 

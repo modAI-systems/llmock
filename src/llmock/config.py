@@ -1,6 +1,7 @@
 """Configuration management - loads YAML with environment variable overrides."""
 
 from functools import lru_cache
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -43,7 +44,7 @@ def _apply_env_overrides(
     """Recursively traverse config dict and apply environment variable overrides.
 
     Environment variables use the format: LLMOCK_SECTION_KEY=value
-    For lists, use semicolon-separated values: LLMOCK_CORS_ALLOW_ORIGINS=http://localhost:8000;http://localhost:5173
+    For lists, use a JSON array: LLMOCK_CORS_ALLOW_ORIGINS='["http://localhost:8000","http://localhost:5173"]'
 
     Args:
         config: Configuration dict to modify in-place.
@@ -60,8 +61,18 @@ def _apply_env_overrides(
         if env_value is not None:
             # Apply the override
             if isinstance(value, list):
-                # For lists, split by semicolon
-                config[key] = env_value.split(";")
+                # Lists must be provided as JSON arrays
+                try:
+                    parsed = json.loads(env_value)
+                    if not isinstance(parsed, list):
+                        raise ValueError(
+                            f"{env_key} must be a JSON array, got {type(parsed).__name__}"
+                        )
+                    config[key] = parsed
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        f'{env_key} must be a JSON array (e.g. \'["a","b"]\'), got: {env_value!r}'
+                    ) from exc
             elif isinstance(value, dict):
                 # For dicts, can't override directly from env, but traverse it
                 _apply_env_overrides(value, f"{env_key}_", f"{path}{key}.")

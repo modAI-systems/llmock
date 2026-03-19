@@ -1,8 +1,11 @@
 # llmock Configuration
 # Each section is consumed by its respective router/component
 
+# Port for the HTTP server (default: 8000)
+port: 8000
+
 # API key for authentication (optional - if not set, no auth required)
-api-key: "your-secret-api-key"
+api-key:
 
 # CORS configuration
 cors:
@@ -21,3 +24,8 @@ models:
     created: 1677610602
     owned_by: "openai"
 
+# Ordered list of strategies (first non-empty result wins)
+strategies:
+  - ErrorStrategy
+  - ToolCallStrategy
+  - MirrorStrategy
