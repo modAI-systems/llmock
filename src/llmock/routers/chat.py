@@ -28,6 +28,7 @@ router = APIRouter(prefix="", tags=["chat"])
 
 
 @router.post("/chat/completions", response_model=None)
+@router.post("/v1/chat/completions", response_model=None)
 async def create_chat_completion(
     request: ChatCompletionRequest,
     config: Annotated[Config, Depends(get_config)],

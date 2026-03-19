@@ -39,6 +39,7 @@ router = APIRouter(prefix="", tags=["responses"])
 
 
 @router.post("/responses", response_model=None)
+@router.post("/v1/responses", response_model=None)
 async def create_response_endpoint(
     request: ResponseCreateRequest,
     config: Annotated[Config, Depends(get_config)],
