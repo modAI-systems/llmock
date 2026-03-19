@@ -1,12 +1,12 @@
-name: Docker
+name: Build and Push Docker Images
 
 on:
   push:
-    branches: [main]
+    tags:
+      - '*'
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,12 +24,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
+            type=ref,event=tag
             type=raw,value=latest
 
       - name: Build and push Docker image
