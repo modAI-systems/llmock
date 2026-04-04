@@ -4,6 +4,9 @@
 # Port for the HTTP server (default: 8000)
 port: 8000
 
+# Debug mode - when true, pretty-prints all incoming request bodies to stdout
+debug: false
+
 # API key for authentication (optional - if not set, no auth required)
 api-key:
 
