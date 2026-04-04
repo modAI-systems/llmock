@@ -528,3 +528,94 @@ async def test_streaming_without_include_usage(raw_client: httpx.AsyncClient) ->
     # No usage chunk should be present
     usage_chunks = [c for c in chunks if not c["choices"] and c.get("usage")]
     assert len(usage_chunks) == 0
+
+
+# ============================================================================
+# Full agentic loop: user trigger → assistant tool call → tool result
+# ============================================================================
+
+
+async def test_full_agentic_loop_mirrors_user_message_after_tool_result() -> None:
+    """Full OpenAI function-calling loop: assert llmock's response on the second turn.
+
+    Simulates the conversation history a real client sends after executing a tool:
+
+    1. user      — original request containing a trigger phrase
+                   ("call tool 'calculate' with '...'")
+    2. assistant — tool call that llmock returned on the first turn
+                   (role=assistant, content=None, tool_calls=[...])
+    3. tool      — the result produced by the caller's tool executor
+                   (role=tool, tool_call_id=..., content="4")
+
+    All three messages are replayed to llmock in a single second-turn request.
+
+    With the default composition [ErrorStrategy, ToolCallStrategy, MirrorStrategy]:
+    - ErrorStrategy:    no "raise error" phrase → returns []
+    - ToolCallStrategy: last non-system message is "tool", not "user" → returns []
+    - MirrorStrategy:   echoes the last *user* message as a plain text response
+
+    Expected: a single assistant text choice whose content equals the original
+    user message.  No tool_calls in the second-turn response.
+    """
+    full_composition_config: Config = {
+        "models": [{"id": "gpt-4", "created": 1700000000, "owned_by": "openai"}],
+        "api-key": TEST_API_KEY,
+        "strategies": ["ErrorStrategy", "ToolCallStrategy", "MirrorStrategy"],
+    }
+    app = create_app(config=full_composition_config)
+    app.dependency_overrides[get_config] = lambda: full_composition_config
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+        headers={"Authorization": f"Bearer {TEST_API_KEY}"},
+    ) as client:
+        user_message = "call tool 'calculate' with '{\"expression\": \"2+2\"}'"
+
+        response = await client.post(
+            "/chat/completions",
+            json={
+                "model": "gpt-4",
+                "messages": [
+                    # Turn 1 – user sent the original request with a trigger phrase
+                    {"role": "user", "content": user_message},
+                    # Turn 1 – llmock replied with a tool call (assistant message)
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_abc123",
+                                "type": "function",
+                                "function": {
+                                    "name": "calculate",
+                                    "arguments": '{"expression": "2+2"}',
+                                },
+                            }
+                        ],
+                    },
+                    # Turn 2 – tool executor returned the result
+                    {
+                        "role": "tool",
+                        "content": "4",
+                        "tool_call_id": "call_abc123",
+                    },
+                ],
+                "tools": [CALCULATOR_TOOL],
+                "stream": False,
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # ToolCallStrategy does not re-trigger: last non-system message is "tool"
+    # MirrorStrategy kicks in and returns the tool result with a prefix
+    assert len(data["choices"]) == 1
+    choice = data["choices"][0]
+    assert choice["finish_reason"] == "stop"
+    assert choice["message"]["role"] == "assistant"
+    assert choice["message"]["content"] == "last tool call result is 4"
+    # No tool calls in the second-turn response
+    assert choice["message"].get("tool_calls") is None
