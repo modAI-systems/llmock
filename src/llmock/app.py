@@ -1,5 +1,8 @@
 """FastAPI application factory and setup."""
 
+import json
+import pprint
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -51,6 +54,29 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class DebugLoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware to pretty-print incoming request bodies when debug mode is enabled."""
+
+    def __init__(self, app, config: Config):
+        """Initialize middleware with config."""
+        super().__init__(app)
+        self.config = config
+
+    async def dispatch(self, request: Request, call_next):
+        """Log request body if debug mode is enabled."""
+        if self.config.get("debug"):
+            body = await request.body()
+            if body:
+                try:
+                    parsed = json.loads(body)
+                    print(f"\n[DEBUG] {request.method} {request.url.path}")
+                    pprint.pprint(parsed)
+                except json.JSONDecodeError, ValueError:
+                    print(f"\n[DEBUG] {request.method} {request.url.path} (raw)")
+                    print(body.decode(errors="replace"))
+        return await call_next(request)
+
+
 def create_app(config: Config = get_config()) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="llmock")
@@ -70,6 +96,10 @@ def create_app(config: Config = get_config()) -> FastAPI:
 
     # Add API key middleware
     app.add_middleware(APIKeyMiddleware, config=config)
+
+    # Add debug logging middleware (outermost, runs before auth)
+    if config.get("debug"):
+        app.add_middleware(DebugLoggingMiddleware, config=config)
 
     # Include routers
     app.include_router(health.router)
