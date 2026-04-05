@@ -4,8 +4,9 @@ description: >-
   Run and configure llmock via Docker, an OpenAI-compatible mock server for
   testing LLM integrations. Use when you need a local mock for OpenAI endpoints
   (/models, /chat/completions, /responses), when testing tool calling,
-  error handling, or streaming against a deterministic server, or when
-  configuring mock behaviors via config.yaml and Docker environment variables.
+  error handling, or streaming against a deterministic server, when
+  configuring mock behaviors via config.yaml and Docker environment variables,
+  or when inspecting received requests via the /history endpoint.
 license: MIT
 metadata:
   author: modAI-systems
@@ -115,6 +116,21 @@ Requests must specify a model that exists in the `models` config list. Invalid m
 
 If `api-key` is set in config, clients must send `Authorization: Bearer <key>`. If `api-key` is not set, all requests are allowed. The `/health` endpoint never requires auth.
 
+### Debug Mode
+
+Set `debug: true` in config (or `LLMOCK_DEBUG=true` env var) to pretty-print every incoming request body to stdout. Useful when developing or diagnosing unexpected requests.
+
+```yaml
+debug: true
+```
+
+Output format:
+
+```
+[DEBUG] POST /chat/completions
+{'messages': [{'content': 'Hello', 'role': 'user'}], 'model': 'gpt-4o'}
+```
+
 ## Endpoints
 
 | Endpoint | Method | Description |
@@ -124,8 +140,48 @@ If `api-key` is set in config, clients must send `Authorization: Bearer <key>`. 
 | `/chat/completions` | POST | Chat Completions API (streaming supported) |
 | `/responses` | POST | Responses API (streaming supported) |
 | `/health` | GET | Health check (no auth required) |
+| `/history` | GET | Return all received requests in order (no auth required) |
+| `/history` | DELETE | Clear the request history (no auth required) |
 
 Both `/chat/completions` and `/responses` support `stream=True` (SSE, word-level chunking) and `stream_options.include_usage` for usage stats.
+
+The `/history` and `DELETE /history` endpoints never require auth regardless of the `api-key` config.
+
+## Request History
+
+llmock records every incoming API request (excluding `/health`, `GET /history`, and `DELETE /history` themselves). This is useful for asserting what your code actually sent to the mock.
+
+```bash
+# Inspect all recorded requests
+curl http://localhost:8000/history
+
+# Clear history between test runs
+curl -X DELETE http://localhost:8000/history
+```
+
+Each entry in the `requests` array contains:
+
+| Field | Description |
+|-------|-------------|
+| `method` | HTTP method (e.g. `"POST"`) |
+| `path` | Request path (e.g. `"/chat/completions"`) |
+| `body` | Parsed JSON body, or raw string if not JSON |
+| `timestamp` | ISO 8601 timestamp of when the request arrived |
+
+Example response:
+
+```json
+{
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/chat/completions",
+      "body": {"model": "gpt-4o", "messages": [{"role": "user", "content": "Hi"}]},
+      "timestamp": "2026-04-05T07:00:00+00:00"
+    }
+  ]
+}
+```
 
 ## Configuration
 
@@ -145,6 +201,9 @@ models:
 
 ```yaml
 api-key: "your-secret-api-key"
+
+# Enable request body logging to stdout
+debug: false
 
 cors:
   allow-origins:
@@ -235,5 +294,6 @@ Out of the box, the container serves:
 2. **Strategy order matters** — first non-empty result wins; remaining strategies are skipped.
 3. **Model must be valid** — model validation runs before strategies; unknown models → 404.
 4. **Auth is optional** — no `api-key` in config = all requests allowed.
-5. **Config path in Docker is `/app/config.yaml`** — mount with `-v ./config.yaml:/app/config.yaml:ro`.
-6. **Use `docker container` syntax** — always `docker container run`, `docker container stop`, etc.
+5. **History endpoints need no auth** — `GET /history` and `DELETE /history` bypass authentication always.
+6. **Config path in Docker is `/app/config.yaml`** — mount with `-v ./config.yaml:/app/config.yaml:ro`.
+7. **Use `docker container` syntax** — always `docker container run`, `docker container stop`, etc.
