@@ -9,6 +9,7 @@ OpenAI-compatible mock server for testing LLM integrations.
 ## Features
 
 - OpenAI API compatibility with key endpoints (`/models`, `/chat/completions`, `/responses`)
+- **Request history** — inspect all received requests via `GET /history` and clear them with `DELETE /history` (no auth required)
 - Default mirror strategy (echoes input as output)
 - **Tool calling support** — trigger phrase–driven tool call responses when `tools` are present in the request using `call tool '<name>' with '<json>'`
 - **Error simulation** — trigger phrase–driven error responses using `raise error <json>` in the last user message
@@ -62,6 +63,24 @@ uv run uvicorn llmock.app:app --host 0.0.0.0 --port 8000 --reload
 
 The server will be available at `http://localhost:8000`. Health check available at `/health`.
 
+## Request History
+
+Two utility endpoints (no authentication required) let tests inspect what the server received:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/history` | Returns all recorded requests in order (`{ "requests": [...] }`) |
+| `DELETE` | `/history` | Clears the history (returns `204 No Content`) |
+
+Each entry in `requests` contains `method`, `path`, `body`, and `timestamp`.
+
+```bash
+# See what requests were received
+curl http://localhost:8000/history
+
+# Reset between test runs
+curl -X DELETE http://localhost:8000/history
+```
 
 ## Configuration
 
