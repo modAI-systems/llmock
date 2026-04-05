@@ -240,11 +240,11 @@ async def test_tool_call_non_streaming(raw_client: httpx.AsyncClient) -> None:
 async def test_tool_call_does_not_fire_when_last_message_is_tool_result(
     raw_client: httpx.AsyncClient,
 ) -> None:
-    """In an agentic loop the ToolCallStrategy must NOT re-trigger on cycle 2+.
+    """In an agentic loop ToolCallStrategy returns the tool result as a text response.
 
     History: user(trigger) → assistant(tool_call) → tool(result)
-    The last non-system message is 'tool', so the strategy should return []
-    and NOT produce another tool call response.
+    The last non-system message is 'tool', so the strategy should return a text
+    response with the tool result content instead of another tool call.
     """
     response = await raw_client.post(
         "/chat/completions",
@@ -282,11 +282,12 @@ async def test_tool_call_does_not_fire_when_last_message_is_tool_result(
 
     assert response.status_code == 200
     data = response.json()
-    # ToolCallStrategy must NOT fire — the trigger was already processed.
-    # With only ToolCallStrategy in the chain, it falls through and produces [].
-    assert data["choices"] == [], (
-        "ToolCallStrategy should not re-fire when the last message is a tool result"
-    )
+    # ToolCallStrategy returns the tool result as a text response, not another tool call.
+    assert len(data["choices"]) == 1
+    choice = data["choices"][0]
+    assert choice["finish_reason"] == "stop"
+    assert choice["message"]["content"] == "last tool call result is 4"
+    assert choice["message"].get("tool_calls") is None
 
 
 async def test_tool_call_does_not_fire_when_last_message_is_assistant(
@@ -551,8 +552,8 @@ async def test_full_agentic_loop_mirrors_user_message_after_tool_result() -> Non
 
     With the default composition [ErrorStrategy, ToolCallStrategy, MirrorStrategy]:
     - ErrorStrategy:    no "raise error" phrase → returns []
-    - ToolCallStrategy: last non-system message is "tool", not "user" → returns []
-    - MirrorStrategy:   echoes the last *user* message as a plain text response
+    - ToolCallStrategy: last non-system message is "tool" → returns "last tool call result is 4"
+    - MirrorStrategy:   not reached
 
     Expected: a single assistant text choice whose content equals the original
     user message.  No tool_calls in the second-turn response.
@@ -610,8 +611,7 @@ async def test_full_agentic_loop_mirrors_user_message_after_tool_result() -> Non
     assert response.status_code == 200
     data = response.json()
 
-    # ToolCallStrategy does not re-trigger: last non-system message is "tool"
-    # MirrorStrategy kicks in and returns the tool result with a prefix
+    # ToolCallStrategy handles the tool result and returns a text response
     assert len(data["choices"]) == 1
     choice = data["choices"][0]
     assert choice["finish_reason"] == "stop"

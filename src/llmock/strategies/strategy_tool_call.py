@@ -25,11 +25,12 @@ import re
 from typing import Any
 
 from llmock.schemas.chat import ChatCompletionRequest
-from llmock.schemas.responses import ResponseCreateRequest
-from llmock.strategies.base import StrategyResponse, tool_response
+from llmock.schemas.responses import FunctionCallOutputItem, ResponseCreateRequest
+from llmock.strategies.base import StrategyResponse, text_response, tool_response
 from llmock.utils.chat import (
     extract_last_user_text_chat,
     extract_last_user_text_response,
+    extract_text_content,
 )
 
 # Matches:  call tool '<name>' with '<args>'
@@ -94,6 +95,20 @@ class ChatToolCallStrategy:
             (msg.role for msg in reversed(request.messages) if msg.role != "system"),
             None,
         )
+        if last_role == "tool":
+            content = next(
+                (
+                    extract_text_content(msg.content)
+                    for msg in reversed(request.messages)
+                    if msg.role == "tool"
+                ),
+                None,
+            )
+            return (
+                [text_response(f"last tool call result is {content}")]
+                if content
+                else []
+            )
         if last_role != "user":
             return []
         text = extract_last_user_text_chat(request)
@@ -133,9 +148,10 @@ class ResponseToolCallStrategy:
             last_item = request.input[-1] if request.input else None
             if last_item is None:
                 return []
+            if isinstance(last_item, FunctionCallOutputItem):
+                return [text_response(f"last tool call result is {last_item.output}")]
             last_role = getattr(last_item, "role", None)
             if last_role != "user":
-                # Covers FunctionCallOutputItem (no role) and assistant items.
                 return []
         text = extract_last_user_text_response(request)
         if text is None:
