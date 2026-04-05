@@ -330,12 +330,12 @@ def test_chat_tool_call_strategy_empty_args_normalised() -> None:
 
 
 def test_chat_tool_call_strategy_last_message_is_tool_role() -> None:
-    """Strategy must NOT fire when the last non-system message has role 'tool'.
+    """Strategy returns the tool result as text when last non-system message is 'tool'.
 
     In an agentic loop the conversation history looks like:
         user(trigger) → assistant(tool_call) → tool(result)
     The trigger phrase still lives in the user message, but the last turn
-    belongs to the tool.  Firing again would create an infinite loop.
+    belongs to the tool.  The strategy should return the tool result as text.
     """
     strategy = ChatToolCallStrategy(config={})
     request = ChatCompletionRequest(
@@ -353,8 +353,9 @@ def test_chat_tool_call_strategy_last_message_is_tool_role() -> None:
 
     result = strategy.generate_response(request)
 
-    # The last non-system message is 'tool' → strategy must fall through.
-    assert result == []
+    # The last non-system message is 'tool' → strategy returns 'last tool call result is 4'.
+    assert len(result) == 1
+    assert result[0].content == "last tool call result is 4"
 
 
 # ============================================================================

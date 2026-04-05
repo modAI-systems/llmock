@@ -26,43 +26,29 @@ class ChatMirrorStrategy:
     def __init__(self, config: dict[str, Any]) -> None:
         pass
 
-    # Roles that can produce a mirror response, in priority order.
-    # The reversed message list is scanned and the first message whose role
-    # appears here determines the response.
-    _MIRROR_ROLES = ("tool", "user")
-
     def generate_response(
         self, request: ChatCompletionRequest
     ) -> list[StrategyResponse]:
-        """Return a response based on the most recent message with a mirror role.
-
-        Scans the message list in reverse and returns a response for the first
-        message whose role is in ``_MIRROR_ROLES``:
-
-        - ``"tool"``  → ``"last tool call result is <content>"``
-        - ``"user"``  → echoes the message content
+        """Return a response echoing the last user message.
 
         Args:
             request: The chat completion request containing messages.
 
         Returns:
             A single-item list with a text StrategyResponse, or a default
-            message when no qualifying message is found.
+            message when no user message is found.
         """
         last = next(
             (
                 msg
                 for msg in reversed(request.messages)
-                if msg.role in self._MIRROR_ROLES and extract_text_content(msg.content)
+                if msg.role == "user" and extract_text_content(msg.content)
             ),
             None,
         )
         if last is None:
             return [text_response("No user message provided.")]
         content = extract_text_content(last.content) or ""
-        if last.role == "tool":
-            return [text_response(f"last tool call result is {content}")]
-        # role == "user"
         return (
             [text_response(content)]
             if content

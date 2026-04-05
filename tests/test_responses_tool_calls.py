@@ -321,11 +321,11 @@ async def test_responses_tool_call_picks_configured_tool(
 async def test_responses_tool_call_does_not_fire_when_last_item_is_function_call_output(
     client: httpx.AsyncClient,
 ) -> None:
-    """In an agentic loop the ToolCallStrategy must NOT re-trigger on cycle 2+.
+    """In an agentic loop the ToolCallStrategy handles the tool result on cycle 2+.
 
     History: user(trigger) → function_call(tool call) → function_call_output(result)
-    The last item is a FunctionCallOutputItem, so the strategy should return []
-    and NOT produce another tool call response.
+    The last item is a FunctionCallOutputItem, so the strategy should return
+    a "last tool call result is ..." text response instead of another tool call.
     """
     response = await client.post(
         "/responses",
@@ -348,9 +348,8 @@ async def test_responses_tool_call_does_not_fire_when_last_item_is_function_call
 
     assert response.status_code == 200
     data = response.json()
-    # ToolCallStrategy must NOT fire — the trigger was already processed.
-    # The composition chain falls through → router produces a text message, not a tool call.
-    assert len(data["output"]) > 0
-    assert data["output"][0]["type"] != "function_call", (
-        "ToolCallStrategy should not re-fire when the last item is a function_call_output"
-    )
+    assert len(data["output"]) == 1
+    output_item = data["output"][0]
+    assert output_item["type"] == "message"
+    assert output_item["content"][0]["type"] == "output_text"
+    assert output_item["content"][0]["text"] == "last tool call result is 4"
