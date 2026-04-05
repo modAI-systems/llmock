@@ -58,8 +58,9 @@ This project is designed for AI-first development. All agents MUST follow these 
 - **PROCESS**:
     1. Check `README.md` for endpoint references and usage examples.
     2. Check `docs/ARCHITECTURE.md` for endpoint documentation.
-    3. Check any other docs that reference API endpoints.
-    4. Update all affected documentation before marking task as complete.
+    3. Check `docs/llmock-skill/SKILL.md` — update it whenever there are functional changes relevant to users of the skill (new endpoints, new config options, changed behavior, new trigger phrases, etc.). Also update `docs/llmock-skill/references/config.yaml` if config keys change.
+    4. Check any other docs that reference API endpoints.
+    5. Update all affected documentation before marking task as complete.
 
 ## PROJECT OVERVIEW
 - **Core Stack**: Python + FastAPI + uv (build system)
