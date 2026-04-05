@@ -8,8 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from llmock import history_store
 from llmock.config import Config, get_config
-from llmock.routers import chat, health, models, responses
+from llmock.routers import chat, health, history, models, responses
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
@@ -26,8 +27,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # Skip auth for health endpoint
-        if request.url.path == "/health":
+        # Skip auth for health and history endpoints
+        if request.url.path in ("/health", "/history"):
             return await call_next(request)
 
         config_api_key = self.config.get("api-key")
@@ -51,6 +52,27 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 content={"error": {"message": "Invalid API key", "type": "auth_error"}},
             )
 
+        return await call_next(request)
+
+
+# Paths that should not be recorded in the history
+_HISTORY_SKIP_PATHS = {"/health", "/history"}
+
+
+class HistoryRecordingMiddleware(BaseHTTPMiddleware):
+    """Middleware to record all incoming API requests into the history store."""
+
+    async def dispatch(self, request: Request, call_next):
+        """Record the request body then forward the request."""
+        if request.method != "OPTIONS" and request.url.path not in _HISTORY_SKIP_PATHS:
+            body = await request.body()  # caches body for downstream handlers
+            parsed_body = None
+            if body:
+                try:
+                    parsed_body = json.loads(body)
+                except json.JSONDecodeError, ValueError:
+                    parsed_body = body.decode(errors="replace")
+            history_store.add_entry(request.method, request.url.path, parsed_body)
         return await call_next(request)
 
 
@@ -97,12 +119,16 @@ def create_app(config: Config = get_config()) -> FastAPI:
     # Add API key middleware
     app.add_middleware(APIKeyMiddleware, config=config)
 
+    # Add history recording middleware (records before auth so all requests captured)
+    app.add_middleware(HistoryRecordingMiddleware)
+
     # Add debug logging middleware (outermost, runs before auth)
     if config.get("debug"):
         app.add_middleware(DebugLoggingMiddleware, config=config)
 
     # Include routers
     app.include_router(health.router)
+    app.include_router(history.router)
     app.include_router(models.router)
     app.include_router(chat.router)
     app.include_router(responses.router)

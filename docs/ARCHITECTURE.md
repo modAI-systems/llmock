@@ -6,6 +6,8 @@
 
 Mock server implementing OpenAI's `/models`, `/chat/completions`, and `/responses` endpoints. Default behavior: echo input as output (MirrorStrategy). Pluggable strategy system for custom behaviors.
 
+Includes **request history endpoints** (`GET /history`, `DELETE /history`) that allow tests to inspect and reset the list of received requests without authentication.
+
 **Spec Reference**: Follow [OpenAI API Reference](https://platform.openai.com/docs/api-reference) exactly.
 **OpenAPI Spec**: https://app.stainless.com/api/spec/documented/openai/openapi.documented.yml
 
