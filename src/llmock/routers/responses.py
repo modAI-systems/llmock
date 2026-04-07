@@ -246,7 +246,7 @@ async def generate_streaming_response(
         yield f"event: response.output_text.delta\ndata: {_json_dumps(delta_event)}\n\n"
 
         # Small delay to simulate streaming
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.002)
 
     # Event: response.output_text.done
     text_done_event = {
@@ -463,7 +463,7 @@ async def generate_streaming_tool_call_response(
     }
     yield f"event: response.function_call_arguments.delta\ndata: {_json_dumps(delta_event)}\n\n"
 
-    await asyncio.sleep(0.01)
+    await asyncio.sleep(0.002)
 
     # Event: response.function_call_arguments.done
     done_event = {
