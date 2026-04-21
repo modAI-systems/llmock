@@ -22,7 +22,12 @@ from llmock.strategies.factory import _STRATEGIES
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_STRATEGIES = ["ErrorStrategy", "ToolCallStrategy", "MirrorStrategy"]
+_DEFAULT_STRATEGIES = [
+    "ErrorStrategy",
+    "CustomAnswersStrategy",
+    "ToolCallStrategy",
+    "MirrorStrategy",
+]
 
 
 class ChatCompositionStrategy:

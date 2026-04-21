@@ -13,6 +13,7 @@ OpenAI-compatible mock server for testing LLM integrations.
 - Default mirror strategy (echoes input as output)
 - **Tool calling support** — trigger phrase–driven tool call responses when `tools` are present in the request using `call tool '<name>' with '<json>'`
 - **Error simulation** — trigger phrase–driven error responses using `raise error <json>` in the last user message
+- **Custom answers** — return preconfigured answers for exact-match questions via `customReplies` in `config.yaml`
 - Streaming support for both Chat Completions and Responses APIs (including `stream_options.include_usage`)
 
 ## Quick Start
@@ -99,11 +100,19 @@ cors:
     - "http://localhost:8000"
 
 # Ordered list of strategies to try (first non-empty result wins)
-# Available: ErrorStrategy, ToolCallStrategy, MirrorStrategy
+# Available: ErrorStrategy, CustomAnswersStrategy, ToolCallStrategy, MirrorStrategy
 strategies:
   - ErrorStrategy
+  - CustomAnswersStrategy
   - ToolCallStrategy
   - MirrorStrategy
+
+# Inline question→answer pairs for CustomAnswersStrategy (exact-match, case-sensitive)
+customReplies:
+  - question: How are you today?
+    answer: I'm fine. how are you?
+  - question: What is 1+1?
+    answer: 2
 
 models:
   - id: "gpt-4o"
@@ -216,6 +225,28 @@ client.chat.completions.create(
 ```
 
 Only the last user message is checked. System/assistant/tool messages are ignored.
+Works on both `/chat/completions` and `/responses` endpoints.
+
+### Custom Answers
+
+When `CustomAnswersStrategy` is included in the `strategies` list, llmock checks the last user message against a list of preconfigured question/answer pairs (exact match, case-sensitive, whitespace trimmed). Configure the pairs inline in `config.yaml`:
+
+```yaml
+strategies:
+  - ErrorStrategy
+  - CustomAnswersStrategy
+  - ToolCallStrategy
+  - MirrorStrategy
+
+customReplies:
+  - question: How are you today?
+    answer: I'm fine. how are you?
+  - question: What is 1+1?
+    answer: 2
+```
+
+If the message matches a `question`, the corresponding `answer` is returned. If no match is found, the strategy falls through to the next one (e.g. `MirrorStrategy`).
+
 Works on both `/chat/completions` and `/responses` endpoints.
 
 ## Development

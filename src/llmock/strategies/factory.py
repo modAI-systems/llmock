@@ -16,6 +16,10 @@ from llmock.strategies.strategy_error import (
     ChatErrorStrategy,
     ResponseErrorStrategy,
 )
+from llmock.strategies.strategy_custom_answers import (
+    ChatCustomAnswersStrategy,
+    ResponseCustomAnswersStrategy,
+)
 from llmock.strategies.strategy_tool_call import (
     ChatToolCallStrategy,
     ResponseToolCallStrategy,
@@ -23,6 +27,10 @@ from llmock.strategies.strategy_tool_call import (
 
 # Short strategy names used in config → (ChatClass, ResponseClass)
 _STRATEGIES: dict[str, tuple[type, type]] = {
+    "CustomAnswersStrategy": (
+        ChatCustomAnswersStrategy,
+        ResponseCustomAnswersStrategy,
+    ),
     "ErrorStrategy": (ChatErrorStrategy, ResponseErrorStrategy),
     "MirrorStrategy": (ChatMirrorStrategy, ResponseMirrorStrategy),
     "ToolCallStrategy": (ChatToolCallStrategy, ResponseToolCallStrategy),
