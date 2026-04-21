@@ -30,5 +30,13 @@ models:
 # Ordered list of strategies (first non-empty result wins)
 strategies:
   - ErrorStrategy
+  - CustomAnswersStrategy
   - ToolCallStrategy
   - MirrorStrategy
+
+# Inline question→answer pairs for CustomAnswersStrategy (exact-match, case-sensitive)
+# customReplies:
+#   - question: How are you today?
+#     answer: I'm fine. how are you?
+#   - question: What is 1+1?
+#     answer: 2
