@@ -9,7 +9,7 @@ install:
 
 # Start the development server
 start:
-    uv run uvicorn modai.main:app
+    uv run uvicorn llmock.app:app
 
 # Run tests
 test:
@@ -21,6 +21,6 @@ check:
     uv run ruff check src
 
 # Fix code style and linting issues
-check-write:
+format:
     uv run ruff format src
     uv run ruff check --fix src
