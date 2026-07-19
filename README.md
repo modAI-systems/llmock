@@ -1,3 +1,5 @@
+Deprecated: Use https://aimock.copilotkit.dev/ instead
+
 # LLM Mock
 
 [![CI](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml/badge.svg)](https://github.com/modAI-systems/llmock/actions/workflows/ci.yml)
